@@ -411,17 +411,37 @@ def main():
     print(f"最大搜尋頁數: {max_pages}")
     print("注意: 當找到包含目標關鍵字的結果時，將點擊進入該頁面並停留5秒後返回")
     
-    # 初始化瀏覽器
-    logging.info("初始化瀏覽器...")
-    driver = setup_driver()
+    driver = None  # 初始化 driver 為 None
+    initial_search_successful = False
     
+    while not initial_search_successful:
+        try:
+            # 初始化瀏覽器
+            logging.info("初始化瀏覽器...")
+            driver = setup_driver()
+            
+            # 在Google上搜尋
+            print("\n正在訪問Google...")
+            if not search_google(driver, search_query):
+                print("搜尋初始化失敗，將在10秒後重試...")
+                if driver:
+                    driver.quit()
+                time.sleep(10) # 等待10秒
+                continue # 重新開始迴圈，再次嘗試初始化和搜尋
+            
+            initial_search_successful = True # 首次搜尋成功
+            
+        except Exception as e:
+            logging.error(f"初始化或首次搜尋過程中發生錯誤: {str(e)}")
+            print(f"\n❌ 初始化或首次搜尋過程中發生錯誤: {str(e)}")
+            if driver:
+                driver.quit()
+            print("將在10秒後重試...")
+            time.sleep(10) # 等待10秒
+            continue # 重新開始迴圈
+
+    # 首次搜尋成功後，繼續執行後續的頁面搜尋邏輯
     try:
-        # 在Google上搜尋
-        print("\n正在訪問Google...")
-        if not search_google(driver, search_query):
-            print("搜尋初始化失敗，請檢查網絡連接或稍後再試")
-            return
-        
         page_num = 1
         found = False
         clicked = False
@@ -504,8 +524,9 @@ def main():
         print(f"\n❌ 執行過程中發生錯誤: {str(e)}")
     finally:
         # 關閉瀏覽器
-        logging.info("關閉瀏覽器")
-        driver.quit()
+        if driver: # 確保 driver 不是 None 才執行 quit
+            logging.info("關閉瀏覽器")
+            driver.quit()
 
 
 if __name__ == "__main__":
