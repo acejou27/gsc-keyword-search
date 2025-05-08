@@ -104,30 +104,20 @@ def check_for_captcha(driver):
     return False
 
 def handle_captcha(driver):
-    """處理Google驗證碼"""
-    logging.warning("檢測到驗證碼！請手動完成驗證...")
-    print("\n⚠️ 檢測到Google驗證碼！")
-    print("請在瀏覽器中手動完成驗證，完成後按Enter繼續...")
+    """處理Google驗證碼 - 自動關閉瀏覽器並返回False以觸發重新啟動"""
+    logging.warning("檢測到驗證碼！自動關閉瀏覽器並重新啟動...")
+    print("\n⚠️ 檢測到Google驗證碼！自動關閉瀏覽器並重新啟動...")
+    
+    # 關閉當前瀏覽器實例
     try:
-        input("按Enter繼續...")
-    except EOFError:
-        print("\n輸入被中斷，繼續執行...")
+        driver.quit()
+        logging.info("已關閉瀏覽器")
+        print("✓ 已關閉瀏覽器，準備重新啟動...")
     except Exception as e:
-        print(f"\n輸入過程中發生錯誤: {e}，繼續執行...")
+        logging.error(f"關閉瀏覽器時出錯: {str(e)}")
+        print(f"❌ 關閉瀏覽器時出錯: {str(e)}")
     
-    # 等待用戶完成驗證後，檢查是否成功
-    max_wait = 60  # 最多等待60秒
-    start_time = time.time()
-    
-    while time.time() - start_time < max_wait:
-        if not check_for_captcha(driver):
-            logging.info("驗證碼已成功處理")
-            print("✓ 驗證碼已成功處理，繼續執行...")
-            return True
-        time.sleep(2)
-    
-    logging.error("驗證碼處理超時")
-    print("❌ 驗證碼處理超時，請重新運行程序")
+    # 直接返回False，讓調用函數知道需要重新初始化瀏覽器
     return False
 
 def search_google(driver, search_query):
@@ -143,11 +133,11 @@ def search_google(driver, search_query):
         
         # 檢查是否有驗證碼
         if check_for_captcha(driver):
-            if not handle_captcha(driver):
-                return False
+            # 如果檢測到驗證碼，handle_captcha會關閉瀏覽器並返回False
+            return handle_captcha(driver)
         
         # 等待搜尋結果加載，增加等待時間
-        WebDriverWait(driver, 20).until(
+        WebDriverWait(driver, 3).until(
             EC.presence_of_element_located((By.ID, "search"))
         )
         
@@ -171,8 +161,8 @@ def find_keyword_on_page(driver, target_keyword):
     """在當前頁面查找目標關鍵字，添加更多人為行為"""
     # 檢查是否有驗證碼
     if check_for_captcha(driver):
-        if not handle_captcha(driver):
-            return False
+        # 如果檢測到驗證碼，handle_captcha會關閉瀏覽器並返回False
+        return handle_captcha(driver)
     
     # 隨機滾動頁面，模擬閱讀行為
     for _ in range(random.randint(1, 3)):
@@ -227,8 +217,8 @@ def find_and_click_result(driver, target_keyword):
     """在搜尋結果中查找包含特定關鍵字的鏈接，點擊並在指定時間後返回"""
     # 檢查是否有驗證碼
     if check_for_captcha(driver):
-        if not handle_captcha(driver):
-            return False
+        # 如果檢測到驗證碼，handle_captcha會關閉瀏覽器並返回False
+        return handle_captcha(driver)
     
     # 隨機滾動頁面，模擬閱讀行為
     for _ in range(random.randint(1, 3)):
@@ -277,7 +267,7 @@ def find_and_click_result(driver, target_keyword):
         driver.execute_script("arguments[0].click();", target_link)
         
         # 等待新標籤頁打開
-        WebDriverWait(driver, 10).until(EC.number_of_windows_to_be(2))
+        WebDriverWait(driver, 1).until(EC.number_of_windows_to_be(2))
         
         # 切換到新打開的標籤頁
         new_window = [window for window in driver.window_handles if window != current_window][0]
@@ -290,7 +280,7 @@ def find_and_click_result(driver, target_keyword):
         print(f"✓ 已點擊並進入包含關鍵字 '{target_keyword}' 的頁面")
         
         # 在頁面停留指定時間並模擬滾動
-        stay_time = 10  # 停留10秒
+        stay_time = 2  # 停留10秒
         logging.info(f"在頁面停留 {stay_time} 秒並模擬滾動")
         print(f"在頁面停留 {stay_time} 秒並模擬滾動...")
         
@@ -329,8 +319,8 @@ def go_to_next_page(driver):
     """點擊下一頁按鈕，添加更多人為行為"""
     # 檢查是否有驗證碼
     if check_for_captcha(driver):
-        if not handle_captcha(driver):
-            return False
+        # 如果檢測到驗證碼，handle_captcha會關閉瀏覽器並返回False
+        return handle_captcha(driver)
     
     try:
         # 尋找下一頁按鈕
@@ -473,6 +463,8 @@ def main():
             clicked_current_keyword = False
             retry_count = 0
             max_retries = 2
+            captcha_retry_count = 0
+            max_captcha_retries = 3  # 最多重試3次
             
             while page_num <= max_pages:
                 logging.info(f"正在為 '{current_target_keyword}' 搜尋第 {page_num} 頁")
@@ -481,14 +473,91 @@ def main():
                 # 在當前頁面查找關鍵字
                 found_current_keyword = find_keyword_on_page(driver, current_target_keyword)
                 
-                if found_current_keyword:
+                # 如果返回False且driver已關閉，可能是遇到了驗證碼
+                if found_current_keyword is False and (driver is None or not driver.service.is_connectable()):
+                    logging.warning(f"檢測到驗證碼，瀏覽器已關閉，準備重新啟動 (嘗試 {captcha_retry_count+1}/{max_captcha_retries})")
+                    print(f"\n檢測到驗證碼，瀏覽器已關閉，準備重新啟動 (嘗試 {captcha_retry_count+1}/{max_captcha_retries})")
+                    
+                    # 確保舊的瀏覽器已關閉
+                    try:
+                        if driver:
+                            driver.quit()
+                    except:
+                        pass
+                    
+                    # 等待一段時間後重新啟動瀏覽器
+                    wait_time = random.uniform(5.0, 10.0)
+                    print(f"等待 {wait_time:.1f} 秒後重新啟動瀏覽器...")
+                    time.sleep(wait_time)
+                    
+                    captcha_retry_count += 1
+                    if captcha_retry_count <= max_captcha_retries:
+                        # 重新初始化瀏覽器
+                        try:
+                            driver = setup_driver()
+                            # 重新搜尋
+                            if search_google(driver, search_query):
+                                print("瀏覽器重新啟動成功，繼續搜尋...")
+                                continue  # 重新開始當前頁面的搜尋
+                            else:
+                                print("瀏覽器重新啟動後搜尋失敗，跳過當前關鍵字...")
+                                break  # 跳出循環，處理下一個關鍵字
+                        except Exception as e:
+                            logging.error(f"重新啟動瀏覽器時出錯: {str(e)}")
+                            print(f"❌ 重新啟動瀏覽器時出錯: {str(e)}")
+                            break  # 跳出循環，處理下一個關鍵字
+                    else:
+                        logging.error(f"驗證碼重試次數已達上限 ({max_captcha_retries})，跳過當前關鍵字")
+                        print(f"\n❌ 驗證碼重試次數已達上限 ({max_captcha_retries})，跳過當前關鍵字")
+                        break  # 跳出循環，處理下一個關鍵字
+                
+                if found_current_keyword is True:  # 明確檢查是否為True
                     logging.info(f"成功在第 {page_num} 頁找到關鍵字 '{current_target_keyword}'")
                     print(f"成功在第 {page_num} 頁找到關鍵字 '{current_target_keyword}'")
                     
                     # 嘗試點擊包含關鍵字的搜尋結果
                     clicked_current_keyword = find_and_click_result(driver, current_target_keyword)
                     
-                    if clicked_current_keyword:
+                    # 如果返回False且driver已關閉，可能是遇到了驗證碼
+                    if clicked_current_keyword is False and (driver is None or not driver.service.is_connectable()):
+                        logging.warning(f"點擊結果時檢測到驗證碼，瀏覽器已關閉，準備重新啟動 (嘗試 {captcha_retry_count+1}/{max_captcha_retries})")
+                        print(f"\n點擊結果時檢測到驗證碼，瀏覽器已關閉，準備重新啟動 (嘗試 {captcha_retry_count+1}/{max_captcha_retries})")
+                        
+                        # 確保舊的瀏覽器已關閉
+                        try:
+                            if driver:
+                                driver.quit()
+                        except:
+                            pass
+                        
+                        # 等待一段時間後重新啟動瀏覽器
+                        wait_time = random.uniform(5.0, 10.0)
+                        print(f"等待 {wait_time:.1f} 秒後重新啟動瀏覽器...")
+                        time.sleep(wait_time)
+                        
+                        captcha_retry_count += 1
+                        if captcha_retry_count <= max_captcha_retries:
+                            # 重新初始化瀏覽器
+                            try:
+                                driver = setup_driver()
+                                # 重新搜尋
+                                if search_google(driver, search_query):
+                                    print("瀏覽器重新啟動成功，繼續搜尋...")
+                                    page_num = 1  # 重置頁碼
+                                    break  # 跳出內層循環，重新開始搜尋
+                                else:
+                                    print("瀏覽器重新啟動後搜尋失敗，跳過當前關鍵字...")
+                                    break  # 跳出循環，處理下一個關鍵字
+                            except Exception as e:
+                                logging.error(f"重新啟動瀏覽器時出錯: {str(e)}")
+                                print(f"❌ 重新啟動瀏覽器時出錯: {str(e)}")
+                                break  # 跳出循環，處理下一個關鍵字
+                        else:
+                            logging.error(f"驗證碼重試次數已達上限 ({max_captcha_retries})，跳過當前關鍵字")
+                            print(f"\n❌ 驗證碼重試次數已達上限 ({max_captcha_retries})，跳過當前關鍵字")
+                            break  # 跳出循環，處理下一個關鍵字
+                    
+                    if clicked_current_keyword is True:  # 明確檢查是否為True
                         logging.info(f"已成功點擊包含關鍵字 '{current_target_keyword}' 的結果並返回")
                         print(f"已成功點擊包含關鍵字 '{current_target_keyword}' 的結果並返回")
                         # 找到並點擊後，處理下一個關鍵字
@@ -498,7 +567,48 @@ def main():
                         print(f"無法點擊包含關鍵字 '{current_target_keyword}' 的結果，繼續搜尋下一頁")
                 
                 # 如果沒找到或沒成功點擊，且還有下一頁，則繼續
-                if not go_to_next_page(driver):
+                next_page_result = go_to_next_page(driver)
+                
+                # 如果返回False且driver已關閉，可能是遇到了驗證碼
+                if next_page_result is False and (driver is None or not driver.service.is_connectable()):
+                    logging.warning(f"翻頁時檢測到驗證碼，瀏覽器已關閉，準備重新啟動 (嘗試 {captcha_retry_count+1}/{max_captcha_retries})")
+                    print(f"\n翻頁時檢測到驗證碼，瀏覽器已關閉，準備重新啟動 (嘗試 {captcha_retry_count+1}/{max_captcha_retries})")
+                    
+                    # 確保舊的瀏覽器已關閉
+                    try:
+                        if driver:
+                            driver.quit()
+                    except:
+                        pass
+                    
+                    # 等待一段時間後重新啟動瀏覽器
+                    wait_time = random.uniform(5.0, 10.0)
+                    print(f"等待 {wait_time:.1f} 秒後重新啟動瀏覽器...")
+                    time.sleep(wait_time)
+                    
+                    captcha_retry_count += 1
+                    if captcha_retry_count <= max_captcha_retries:
+                        # 重新初始化瀏覽器
+                        try:
+                            driver = setup_driver()
+                            # 重新搜尋
+                            if search_google(driver, search_query):
+                                print("瀏覽器重新啟動成功，繼續搜尋...")
+                                page_num = 1  # 重置頁碼
+                                break  # 跳出內層循環，重新開始搜尋
+                            else:
+                                print("瀏覽器重新啟動後搜尋失敗，跳過當前關鍵字...")
+                                break  # 跳出循環，處理下一個關鍵字
+                        except Exception as e:
+                            logging.error(f"重新啟動瀏覽器時出錯: {str(e)}")
+                            print(f"❌ 重新啟動瀏覽器時出錯: {str(e)}")
+                            break  # 跳出循環，處理下一個關鍵字
+                    else:
+                        logging.error(f"驗證碼重試次數已達上限 ({max_captcha_retries})，跳過當前關鍵字")
+                        print(f"\n❌ 驗證碼重試次數已達上限 ({max_captcha_retries})，跳過當前關鍵字")
+                        break  # 跳出循環，處理下一個關鍵字
+                
+                if next_page_result is False:  # 正常情況下無法翻頁
                     if retry_count < max_retries:
                         retry_count += 1
                         logging.warning(f"嘗試重新加載頁面並再次查找下一頁按鈕 (嘗試 {retry_count}/{max_retries})")
