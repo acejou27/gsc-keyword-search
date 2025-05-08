@@ -132,8 +132,10 @@ def handle_captcha(driver):
 def search_google(driver, search_query):
     """在Google上搜尋指定查詢詞，使用更人性化的方式"""
     try:
-        logging.info(f"正在訪問Google搜尋頁面")
-        driver.get("https://www.google.com")
+        # 直接構造搜尋URL
+        search_url = f"https://www.google.com/search?q={search_query}"
+        logging.info(f"正在直接訪問Google搜尋結果頁面: {search_url}")
+        driver.get(search_url)
         
         # 隨機等待，模擬人類行為
         time.sleep(random.uniform(1.0, 3.0))
@@ -143,42 +145,20 @@ def search_google(driver, search_query):
             if not handle_captcha(driver):
                 return False
         
-        # 等待搜尋框出現，增加等待時間
-        try:
-            search_box = WebDriverWait(driver, 15).until(
-                EC.element_to_be_clickable((By.NAME, "q"))
-            )
+        # 等待搜尋結果加載，增加等待時間
+        WebDriverWait(driver, 20).until(
+            EC.presence_of_element_located((By.ID, "search"))
+        )
+        
+        # 隨機滾動頁面
+        random_scroll(driver)
+        
+        return True
             
-            # 隨機移動鼠標到搜尋框
-            actions = ActionChains(driver)
-            actions.move_to_element(search_box).pause(random.uniform(0.2, 0.8)).click().perform()
-            
-            # 清空搜尋框（以防有預填內容）
-            search_box.clear()
-            time.sleep(random.uniform(0.3, 0.7))
-            
-            # 使用人性化輸入
-            logging.info(f"正在輸入搜尋詞: {search_query}")
-            human_like_typing(search_box, search_query)
-            
-            # 隨機暫停後提交
-            time.sleep(random.uniform(0.5, 1.5))
-            search_box.submit()
-            
-            # 等待搜尋結果加載，增加等待時間
-            WebDriverWait(driver, 20).until(
-                EC.presence_of_element_located((By.ID, "search"))
-            )
-            
-            # 隨機滾動頁面
-            random_scroll(driver)
-            
-            return True
-            
-        except TimeoutException:
-            logging.error("等待搜尋框超時")
-            print("❌ 無法找到Google搜尋框，可能是網絡問題或Google頁面結構變化")
-            return False
+    except TimeoutException:
+        logging.error("等待搜尋結果頁面加載超時")
+        print("❌ 等待搜尋結果頁面加載超時，可能是網絡問題或Google頁面結構變化")
+        return False
             
     except Exception as e:
         logging.error(f"搜尋過程中發生錯誤: {str(e)}")
