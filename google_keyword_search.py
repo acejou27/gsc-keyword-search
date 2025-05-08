@@ -7,12 +7,13 @@
 這個腳本使用Selenium自動化瀏覽器，在Google搜尋結果中尋找特定關鍵字。
 如果當前頁面沒有找到關鍵字，會自動翻到下一頁繼續搜尋。
 腳本包含防機器人檢測功能，模擬人類行為並處理Google驗證碼。
+腳本支援搜尋多個目標關鍵字，並在點擊進入結果頁面後模擬使用者行為。
 
 使用方法:
-    python google_keyword_search.py [搜尋詞] [目標關鍵字]
+    python google_keyword_search.py [搜尋詞] [目標關鍵字1] [目標關鍵字2] ...
 
 例如:
-    python google_keyword_search.py "Python 教學" "Django"
+    python google_keyword_search.py "Python 教學" "Django" "Flask"
 """
 
 import sys
@@ -288,11 +289,17 @@ def find_and_click_result(driver, target_keyword):
         logging.info(f"已點擊並進入包含關鍵字 '{target_keyword}' 的頁面")
         print(f"✓ 已點擊並進入包含關鍵字 '{target_keyword}' 的頁面")
         
-        # 在頁面停留指定時間
-        stay_time = 5  # 停留5秒
-        logging.info(f"在頁面停留 {stay_time} 秒")
-        print(f"在頁面停留 {stay_time} 秒...")
-        time.sleep(stay_time)
+        # 在頁面停留指定時間並模擬滾動
+        stay_time = 10  # 停留10秒
+        logging.info(f"在頁面停留 {stay_time} 秒並模擬滾動")
+        print(f"在頁面停留 {stay_time} 秒並模擬滾動...")
+        
+        start_scroll_time = time.time()
+        while time.time() - start_scroll_time < stay_time:
+            random_scroll(driver) # 使用現有的隨機滾動函數
+            time.sleep(random.uniform(0.5, 1.5)) # 每次滾動後短暫停頓
+            if time.time() - start_scroll_time >= stay_time:
+                break
         
         # 關閉當前標籤頁並返回搜尋結果頁
         driver.close()
@@ -376,20 +383,39 @@ def go_to_next_page(driver):
 def main():
     # 設定固定的搜尋詞和目標關鍵字
     search_query = "123"
-    target_keyword = "人力銀行"
-    
-    # 可選參數：最大頁數
+    # target_keyword = "人力銀行"
+    target_keywords = []
     max_pages = 5  # 默認最多搜尋5頁
-    if len(sys.argv) > 1:
-        try:
-            max_pages = int(sys.argv[1])
-        except ValueError:
-            print(f"警告: 無效的頁數參數 '{sys.argv[1]}'，使用默認值5")
+
+    if len(sys.argv) < 3:
+        print("使用方法: python google_keyword_search.py [搜尋詞] [目標關鍵字1] [目標關鍵字2] ... [最大頁數(可選)]")
+        print("例如: python google_keyword_search.py \"Python 教學\" \"Django\" \"Flask\" 5")
+        # 使用預設值進行演示
+        search_query = "AI 工具"
+        target_keywords = ["ChatGPT", "Midjourney", "Copilot"]
+        print(f"\n未提供足夠參數，將使用預設搜尋詞: '{search_query}' 和目標關鍵字: {target_keywords}")
+    else:
+        search_query = sys.argv[1]
+        # 最後一個參數可能是頁數
+        if sys.argv[-1].isdigit():
+            target_keywords = sys.argv[2:-1]
+            try:
+                max_pages = int(sys.argv[-1])
+            except ValueError:
+                print(f"警告: 無效的頁數參數 '{sys.argv[-1]}'，將使用預設值 {max_pages}")
+                # 如果頁數參數無效，則將其視為關鍵字
+                target_keywords = sys.argv[2:]
+        else:
+            target_keywords = sys.argv[2:]
+
+    if not target_keywords:
+        print("錯誤: 未指定目標關鍵字。")
+        return
     
     print(f"搜尋詞: {search_query}")
-    print(f"目標關鍵字: {target_keyword}")
-    print(f"最大搜尋頁數: {max_pages}")
-    print("注意: 當找到包含目標關鍵字的結果時，將點擊進入該頁面並停留5秒後返回")
+    print(f"目標關鍵字列表: {target_keywords}")
+    print(f"最大搜尋頁數 (對每個關鍵字): {max_pages}")
+    print("注意: 當找到包含目標關鍵字的結果時，將點擊進入該頁面並停留10秒後返回，然後繼續搜尋下一個關鍵字")
     
     driver = None  # 初始化 driver 為 None
     initial_search_successful = False
@@ -421,80 +447,113 @@ def main():
             continue # 重新開始迴圈
 
     # 首次搜尋成功後，繼續執行後續的頁面搜尋邏輯
-    try:
-        page_num = 1
-        found = False
-        clicked = False
-        retry_count = 0
-        max_retries = 2
+    all_keywords_processed = True
+    for current_target_keyword in target_keywords:
+        print(f"\n{'='*20} 開始處理目標關鍵字: {current_target_keyword} {'='*20}")
         
-        while page_num <= max_pages:
-            logging.info(f"正在搜尋第 {page_num} 頁")
-            print(f"\n正在搜尋第 {page_num} 頁...")
-            
-            # 在當前頁面查找關鍵字
-            found = find_keyword_on_page(driver, target_keyword)
-            
-            if found:
-                logging.info(f"成功在第 {page_num} 頁找到關鍵字 '{target_keyword}'")
-                print(f"成功在第 {page_num} 頁找到關鍵字 '{target_keyword}'")
-                
-                # 嘗試點擊包含關鍵字的搜尋結果
-                clicked = find_and_click_result(driver, target_keyword)
-                
-                if clicked:
-                    logging.info(f"已成功點擊包含關鍵字 '{target_keyword}' 的結果並返回")
-                    print(f"已成功點擊包含關鍵字 '{target_keyword}' 的結果並返回")
-                    # 任務完成，結束程式
-                    print("任務完成，程式自動結束")
-                    break
-                else:
-                    logging.warning(f"無法點擊包含關鍵字 '{target_keyword}' 的結果，繼續搜尋下一頁")
-                    print(f"無法點擊包含關鍵字 '{target_keyword}' 的結果，繼續搜尋下一頁")
-            
-            # 如果沒找到或沒成功點擊，且還有下一頁，則繼續
-            if not go_to_next_page(driver):
-                if retry_count < max_retries:
-                    retry_count += 1
-                    logging.warning(f"嘗試重新加載頁面並再次查找下一頁按鈕 (嘗試 {retry_count}/{max_retries})")
-                    print(f"嘗試重新加載頁面... (嘗試 {retry_count}/{max_retries})")
-                    driver.refresh()
-                    time.sleep(random.uniform(3.0, 5.0))
-                    continue
-                else:
-                    logging.info("已到達最後一頁或無法找到下一頁按鈕")
-                    print("已到達最後一頁")
-                    break
-            
-            # 重置重試計數
-            retry_count = 0
-            page_num += 1
-            
-            # 隨機暫停，避免過快請求
-            pause_time = random.uniform(2.0, 4.0)
-            logging.info(f"暫停 {pause_time:.1f} 秒後繼續")
-            time.sleep(pause_time)
-        
-        if not found:
-            logging.info(f"在搜尋的 {page_num} 頁中未找到關鍵字 '{target_keyword}'")
-            print(f"\n在搜尋的 {page_num} 頁中未找到關鍵字 '{target_keyword}'")
-        elif not clicked:
-            logging.info(f"雖然找到關鍵字 '{target_keyword}'，但未能成功點擊相關結果")
-            print(f"\n雖然找到關鍵字 '{target_keyword}'，但未能成功點擊相關結果")
-        
-        # 如果成功點擊了結果，直接結束程式，不等待用戶按Enter
-        if clicked:
-            print("程式執行完成，自動退出")
-            return
+        # 每次處理新的關鍵字時，如果不是第一次（即 driver 已經初始化），
+        # 重新執行搜尋，確保是針對當前關鍵字的搜尋上下文
+        # 但由於我們的 search_query 是固定的，這裡主要確保我們在 Google 搜尋結果首頁開始
+        # 如果 driver 已經存在，我們需要重新導向到搜尋頁面
+        if driver.current_url != f"https://www.google.com/search?q={search_query}":
+            print(f"\n為關鍵字 '{current_target_keyword}' 重新導向至Google搜尋頁面...")
+            if not search_google(driver, search_query):
+                print(f"為關鍵字 '{current_target_keyword}' 重新搜尋失敗，跳過此關鍵字...")
+                all_keywords_processed = False
+                continue
         else:
-            # 如果沒找到關鍵字或沒成功點擊，等待用戶按任意鍵退出
-            try:
-                input("\n按Enter鍵退出...")
-            except EOFError:
-                print("\n輸入被中斷，程式結束")
-            except Exception as e:
-                print(f"\n輸入過程中發生錯誤: {e}，程式結束")
-            return
+            # 如果已經在搜尋結果頁，可能需要刷新或確保是第一頁
+            # 為了簡化，我們假設 search_google 函數會處理好初始搜尋狀態
+            # 或者，如果我們總是從 search_google 開始一個新的關鍵字搜尋，則不需要此else
+            pass 
+
+        try:
+            page_num = 1
+            found_current_keyword = False
+            clicked_current_keyword = False
+            retry_count = 0
+            max_retries = 2
+            
+            while page_num <= max_pages:
+                logging.info(f"正在為 '{current_target_keyword}' 搜尋第 {page_num} 頁")
+                print(f"\n正在為 '{current_target_keyword}' 搜尋第 {page_num} 頁...")
+                
+                # 在當前頁面查找關鍵字
+                found_current_keyword = find_keyword_on_page(driver, current_target_keyword)
+                
+                if found_current_keyword:
+                    logging.info(f"成功在第 {page_num} 頁找到關鍵字 '{current_target_keyword}'")
+                    print(f"成功在第 {page_num} 頁找到關鍵字 '{current_target_keyword}'")
+                    
+                    # 嘗試點擊包含關鍵字的搜尋結果
+                    clicked_current_keyword = find_and_click_result(driver, current_target_keyword)
+                    
+                    if clicked_current_keyword:
+                        logging.info(f"已成功點擊包含關鍵字 '{current_target_keyword}' 的結果並返回")
+                        print(f"已成功點擊包含關鍵字 '{current_target_keyword}' 的結果並返回")
+                        # 找到並點擊後，處理下一個關鍵字
+                        break # 跳出當前關鍵字的頁面循環
+                    else:
+                        logging.warning(f"無法點擊包含關鍵字 '{current_target_keyword}' 的結果，繼續搜尋下一頁")
+                        print(f"無法點擊包含關鍵字 '{current_target_keyword}' 的結果，繼續搜尋下一頁")
+                
+                # 如果沒找到或沒成功點擊，且還有下一頁，則繼續
+                if not go_to_next_page(driver):
+                    if retry_count < max_retries:
+                        retry_count += 1
+                        logging.warning(f"嘗試重新加載頁面並再次查找下一頁按鈕 (嘗試 {retry_count}/{max_retries})")
+                        print(f"嘗試重新加載頁面... (嘗試 {retry_count}/{max_retries})")
+                        driver.refresh()
+                        time.sleep(random.uniform(3.0, 5.0))
+                        continue
+                    else:
+                        logging.info(f"已到達最後一頁或無法找到下一頁按鈕 (針對 '{current_target_keyword}')")
+                        print(f"已到達最後一頁 (針對 '{current_target_keyword}')")
+                        break
+                
+                # 重置重試計數
+                retry_count = 0
+                page_num += 1
+                
+                # 隨機暫停，避免過快請求
+                pause_time = random.uniform(2.0, 4.0)
+                logging.info(f"暫停 {pause_time:.1f} 秒後繼續")
+                time.sleep(pause_time)
+            
+            if not found_current_keyword:
+                logging.info(f"在搜尋的 {page_num-1} 頁中未找到關鍵字 '{current_target_keyword}'")
+                print(f"\n在搜尋的 {page_num-1} 頁中未找到關鍵字 '{current_target_keyword}'")
+                all_keywords_processed = False
+            elif not clicked_current_keyword:
+                logging.info(f"雖然找到關鍵字 '{current_target_keyword}'，但未能成功點擊相關結果")
+                print(f"\n雖然找到關鍵字 '{current_target_keyword}'，但未能成功點擊相關結果")
+                all_keywords_processed = False
+            
+            # 每個關鍵字處理完畢後，短暫停頓，準備處理下一個關鍵字或結束
+            if target_keywords.index(current_target_keyword) < len(target_keywords) - 1:
+                print(f"\n準備處理下一個關鍵字...")
+                time.sleep(random.uniform(2.0, 4.0))
+
+        except Exception as e:
+            logging.error(f"處理關鍵字 '{current_target_keyword}' 過程中發生錯誤: {str(e)}")
+            print(f"\n❌ 處理關鍵字 '{current_target_keyword}' 過程中發生錯誤: {str(e)}")
+            all_keywords_processed = False
+            # 可以選擇在這裡 continue 到下一個關鍵字，或者 break 整個循環
+            # 這裡選擇 continue，嘗試處理剩餘的關鍵字
+            continue
+
+    if all_keywords_processed:
+        print("\n所有目標關鍵字均已成功處理完畢。")
+    else:
+        print("\n部分目標關鍵字未能成功處理或找到。")
+
+    # 程式結束前的操作
+    try:
+        input("\n按Enter鍵退出...")
+    except EOFError:
+        print("\n輸入被中斷，程式結束")
+    except Exception as e:
+        print(f"\n輸入過程中發生錯誤: {e}，程式結束")
         
     except KeyboardInterrupt:
         logging.info("用戶中斷程序")
