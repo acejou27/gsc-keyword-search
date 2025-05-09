@@ -123,7 +123,7 @@ def read_csv_keywords(csv_file_path):
         return []
 
 
-def process_keyword_pair(search_query, target_keywords, max_pages=5, search_keywords=None):
+def process_keyword_pair(search_query, target_keywords, max_pages=10, search_keywords=None):
     """
     處理搜尋關鍵字和對應的目標關鍵字列表
     
@@ -141,50 +141,55 @@ def process_keyword_pair(search_query, target_keywords, max_pages=5, search_keyw
     print(f"最大搜尋頁數: {max_pages}")
     print(f"{'='*50}\n")
     
-    driver = None
-    initial_search_successful = False
-    
-    while not initial_search_successful:
-        try:
-            # 初始化瀏覽器
-            logging.info("初始化瀏覽器...")
-            driver = setup_driver()
-            
-            # 在Google上搜尋
-            print("\n正在訪問Google...")
-            if not search_google(driver, search_query):
-                print("搜尋初始化失敗，將在10秒後重試...")
-                if driver:
-                    driver.quit()
-                time.sleep(10)  # 等待10秒
-                continue  # 重新開始迴圈，再次嘗試初始化和搜尋
-            
-            initial_search_successful = True  # 首次搜尋成功
-            
-        except Exception as e:
-            logging.error(f"初始化或首次搜尋過程中發生錯誤: {str(e)}")
-            print(f"\n❌ 初始化或首次搜尋過程中發生錯誤: {str(e)}")
-            if driver:
-                driver.quit()
-            print("將在10秒後重試...")
-            time.sleep(10)  # 等待10秒
-            continue  # 重新開始迴圈
-
-    # 首次搜尋成功後，繼續執行後續的頁面搜尋邏輯
     all_keywords_processed = True
     results = {}
     
-    for current_target_keyword in target_keywords:
-        print(f"\n{'='*20} 開始處理目標關鍵字: {current_target_keyword} {'='*20}")
+    # 對每個搜尋關鍵字單獨進行搜尋
+    for i, current_search_keyword in enumerate(search_keywords):
+        print(f"\n{'#'*20} 使用搜尋關鍵字: {current_search_keyword} {'#'*20}")
         
-        # 每次處理新的關鍵字時重新導向到搜尋頁面
-        if driver.current_url != f"https://www.google.com/search?q={search_query}":
-            print(f"\n為關鍵字 '{current_target_keyword}' 重新導向至Google搜尋頁面...")
-            if not search_google(driver, search_query):
-                print(f"為關鍵字 '{current_target_keyword}' 重新搜尋失敗，跳過此關鍵字...")
-                all_keywords_processed = False
-                results[current_target_keyword] = "搜尋失敗"
-                continue
+        driver = None
+        search_successful = False
+        
+        while not search_successful:
+            try:
+                # 初始化瀏覽器
+                logging.info(f"初始化瀏覽器，準備搜尋關鍵字: {current_search_keyword}...")
+                driver = setup_driver()
+                
+                # 在Google上搜尋當前關鍵字
+                print(f"\n正在訪問Google搜尋關鍵字: {current_search_keyword}...")
+                
+                if not search_google(driver, current_search_keyword):
+                    print(f"搜尋關鍵字 '{current_search_keyword}' 初始化失敗，將在10秒後重試...")
+                    if driver:
+                        driver.quit()
+                    time.sleep(10)  # 等待10秒
+                    continue  # 重新開始迴圈，再次嘗試初始化和搜尋
+                
+                search_successful = True  # 搜尋成功
+                
+            except Exception as e:
+                logging.error(f"初始化或搜尋關鍵字 '{current_search_keyword}' 過程中發生錯誤: {str(e)}")
+                print(f"\n❌ 初始化或搜尋關鍵字 '{current_search_keyword}' 過程中發生錯誤: {str(e)}")
+                if driver:
+                    driver.quit()
+                print("將在10秒後重試...")
+                time.sleep(10)  # 等待10秒
+                continue  # 重新開始迴圈
+        
+        # 搜尋成功後，對每個目標關鍵字進行處理
+        for current_target_keyword in target_keywords:
+            print(f"\n{'='*20} 在搜尋 '{current_search_keyword}' 中尋找目標關鍵字: {current_target_keyword} {'='*20}")
+            
+            # 確保我們在正確的搜尋結果頁面
+            if driver.current_url != f"https://www.google.com/search?q={current_search_keyword}":
+                print(f"\n為目標關鍵字 '{current_target_keyword}' 重新導向至Google搜尋頁面...")
+                if not search_google(driver, current_search_keyword):
+                    print(f"為目標關鍵字 '{current_target_keyword}' 重新搜尋失敗，跳過此關鍵字...")
+                    all_keywords_processed = False
+                    results[f"{current_search_keyword} -> {current_target_keyword}"] = "搜尋失敗"
+                    continue
 
         try:
             page_num = 1
@@ -194,8 +199,8 @@ def process_keyword_pair(search_query, target_keywords, max_pages=5, search_keyw
             max_captcha_retries = 3  # 最多重試3次
             
             while page_num <= max_pages:
-                logging.info(f"正在為 '{current_target_keyword}' 搜尋第 {page_num} 頁")
-                print(f"\n正在為 '{current_target_keyword}' 搜尋第 {page_num} 頁...")
+                logging.info(f"正在為 '{current_search_keyword}' 搜尋中尋找目標關鍵字 '{current_target_keyword}' 第 {page_num} 頁")
+                print(f"\n正在為 '{current_search_keyword}' 搜尋中尋找目標關鍵字 '{current_target_keyword}' 第 {page_num} 頁...")
                 
                 # 在當前頁面查找關鍵字
                 found_current_keyword = find_keyword_on_page(driver, current_target_keyword)
@@ -205,15 +210,15 @@ def process_keyword_pair(search_query, target_keywords, max_pages=5, search_keyw
                     # 驗證碼處理邏輯...
                     captcha_retry_count += 1
                     if captcha_retry_count > max_captcha_retries:
-                        results[current_target_keyword] = "驗證碼重試次數已達上限"
+                        results[f"{current_search_keyword} -> {current_target_keyword}"] = "驗證碼重試次數已達上限"
                         break
                     # 重新初始化瀏覽器邏輯...
                     continue
                 
                 if found_current_keyword is True:
-                    logging.info(f"成功在第 {page_num} 頁找到關鍵字 '{current_target_keyword}'")
-                    print(f"成功在第 {page_num} 頁找到關鍵字 '{current_target_keyword}'")
-                    results[current_target_keyword] = f"在第 {page_num} 頁找到"
+                    logging.info(f"成功在 '{current_search_keyword}' 搜尋的第 {page_num} 頁找到目標關鍵字 '{current_target_keyword}'")
+                    print(f"成功在 '{current_search_keyword}' 搜尋的第 {page_num} 頁找到目標關鍵字 '{current_target_keyword}'")
+                    results[f"{current_search_keyword} -> {current_target_keyword}"] = f"在第 {page_num} 頁找到"
                     
                     # 嘗試點擊包含關鍵字的搜尋結果
                     clicked_current_keyword = find_and_click_result(driver, current_target_keyword)
@@ -221,7 +226,7 @@ def process_keyword_pair(search_query, target_keywords, max_pages=5, search_keyw
                     # 處理點擊時的驗證碼情況...
                     
                     if clicked_current_keyword is True:
-                        results[current_target_keyword] = f"在第 {page_num} 頁找到並成功點擊"
+                        results[f"{current_search_keyword} -> {current_target_keyword}"] = f"在第 {page_num} 頁找到並成功點擊"
                         break  # 找到並點擊後，處理下一個關鍵字
                 
                 # 如果沒找到或沒成功點擊，且還有下一頁，則繼續
@@ -233,28 +238,34 @@ def process_keyword_pair(search_query, target_keywords, max_pages=5, search_keyw
                     page_num += 1
                 else:
                     print(f"沒有更多頁面或無法翻到下一頁，已搜尋 {page_num} 頁")
-                    if current_target_keyword not in results:
-                        results[current_target_keyword] = f"在 {page_num} 頁內未找到"
+                    if f"{current_search_keyword} -> {current_target_keyword}" not in results:
+                        results[f"{current_search_keyword} -> {current_target_keyword}"] = f"在 {page_num} 頁內未找到"
                     break
             
             # 如果搜尋完所有頁面仍未找到
-            if current_target_keyword not in results:
-                results[current_target_keyword] = f"在 {max_pages} 頁內未找到"
+            if f"{current_search_keyword} -> {current_target_keyword}" not in results:
+                results[f"{current_search_keyword} -> {current_target_keyword}"] = f"在 {max_pages} 頁內未找到"
                 
         except Exception as e:
-            logging.error(f"處理關鍵字 '{current_target_keyword}' 時出錯: {str(e)}")
-            print(f"❌ 處理關鍵字 '{current_target_keyword}' 時出錯: {str(e)}")
-            results[current_target_keyword] = f"處理出錯: {str(e)}"
+            logging.error(f"處理搜尋關鍵字 '{current_search_keyword}' 中的目標關鍵字 '{current_target_keyword}' 時出錯: {str(e)}")
+            print(f"❌ 處理搜尋關鍵字 '{current_search_keyword}' 中的目標關鍵字 '{current_target_keyword}' 時出錯: {str(e)}")
+            results[f"{current_search_keyword} -> {current_target_keyword}"] = f"處理出錯: {str(e)}"
     
-    # 搜尋完成後關閉瀏覽器
-    try:
-        if driver:
-            driver.quit()
-            logging.info("已關閉瀏覽器")
-            print("✓ 已關閉瀏覽器")
-    except Exception as e:
-        logging.error(f"關閉瀏覽器時出錯: {str(e)}")
-        print(f"❌ 關閉瀏覽器時出錯: {str(e)}")
+        # 每個搜尋關鍵字處理完畢後關閉瀏覽器
+        try:
+            if driver:
+                driver.quit()
+                logging.info(f"已關閉搜尋關鍵字 '{current_search_keyword}' 的瀏覽器")
+                print(f"✓ 已關閉搜尋關鍵字 '{current_search_keyword}' 的瀏覽器")
+        except Exception as e:
+            logging.error(f"關閉搜尋關鍵字 '{current_search_keyword}' 的瀏覽器時出錯: {str(e)}")
+            print(f"❌ 關閉搜尋關鍵字 '{current_search_keyword}' 的瀏覽器時出錯: {str(e)}")
+        
+        # 在處理下一個搜尋關鍵字前暫停一段時間，避免過於頻繁的請求
+        if i < len(search_keywords) - 1:
+            wait_time = random.uniform(3.0, 8.0)
+            print(f"\n等待 {wait_time:.1f} 秒後處理下一個搜尋關鍵字...")
+            time.sleep(wait_time)
     
     return results, all_keywords_processed
 
@@ -312,9 +323,24 @@ def main():
     print(f"{'='*50}")
     
     for search_query, results in all_results.items():
-        print(f"\n搜尋詞: {search_query}")
-        for target_keyword, result in results.items():
-            print(f"  - {target_keyword}: {result}")
+        print(f"\n主要搜尋詞: {search_query}")
+        # 按搜尋關鍵字分組顯示結果
+        search_keyword_groups = {}
+        for result_key, result_value in results.items():
+            if " -> " in result_key:
+                search_keyword, target_keyword = result_key.split(" -> ")
+                if search_keyword not in search_keyword_groups:
+                    search_keyword_groups[search_keyword] = []
+                search_keyword_groups[search_keyword].append((target_keyword, result_value))
+            else:
+                # 兼容舊格式的結果
+                print(f"  - {result_key}: {result_value}")
+        
+        # 顯示分組結果
+        for search_keyword, target_results in search_keyword_groups.items():
+            print(f"  搜尋關鍵字: {search_keyword}")
+            for target_keyword, result in target_results:
+                print(f"    - 目標關鍵字 '{target_keyword}': {result}")
     
     print(f"\n{'='*50}")
     print("搜尋完成!")
