@@ -45,6 +45,28 @@ python google_keyword_search.py "Python 教學" "Django"
 
 這將在Google上搜尋「Python 教學」，然後在搜尋結果中尋找「Django」這個關鍵字。
 
+### CSV模式使用方法
+
+```bash
+python google_keyword_search_csv.py keywords.csv [最大頁數]
+```
+
+#### CSV格式
+
+CSV檔案格式為：關鍵字1,關鍵字2,關鍵字3,目標關鍵字
+
+- 第一個關鍵字作為主要搜尋詞
+- 中間的關鍵字作為額外的搜尋詞
+- 最後一個關鍵字作為目標關鍵字
+
+#### 例如：
+
+```
+Python 教學,Python 程式設計,Python 入門,Django
+```
+
+這將使用「Python 教學」作為主要搜尋詞，並在搜尋結果中尋找「Django」這個目標關鍵字。
+
 ## 注意事項
 
 - 程序默認最多搜尋5頁結果
