@@ -33,6 +33,8 @@ pip install selenium
 
 ## 使用方法
 
+### 基本使用
+
 ```bash
 python google_keyword_search.py [搜尋詞] [目標關鍵字]
 ```
@@ -44,6 +46,43 @@ python google_keyword_search.py "Python 教學" "Django"
 ```
 
 這將在Google上搜尋「Python 教學」，然後在搜尋結果中尋找「Django」這個關鍵字。
+
+### 使用代理功能
+
+使用新的main.py腳本可以啟用代理功能，支持GSA Proxy導出的代理列表：
+
+```bash
+python main.py [搜尋詞] [目標關鍵字] --proxy-file [代理文件路徑]
+```
+
+例如：
+
+```bash
+python main.py "Python 教學" "Django" --proxy-file proxies.txt
+```
+
+### 代理文件格式
+
+代理文件應為純文本文件，每行一個代理，格式為IP:端口，例如：
+
+```
+192.168.1.1:8080
+192.168.1.2:8080
+```
+
+### 完整命令行參數
+
+```bash
+python main.py [搜尋詞] [目標關鍵字] [選項]
+```
+
+可用選項：
+- `--max-pages N`: 設置最大搜尋頁數（默認：5）
+- `--max-retries N`: 設置最大重試次數（默認：3）
+- `--proxy-file FILE`: 指定GSA Proxy導出的代理列表文件
+- `--gsa-api-url URL`: 指定GSA Proxy API的URL（如果使用API獲取代理）
+- `--max-failed-attempts N`: 設置代理失敗嘗試的最大次數（默認：3）
+- `--refresh-interval N`: 設置刷新代理列表的時間間隔（秒）（默認：600）
 
 ### CSV模式使用方法
 
@@ -94,6 +133,8 @@ Python 教學,Python 程式設計,Python 入門,Django
    - 更友好的錯誤提示
 
 ## 使用方法
+
+### 基本使用
 
 基本用法：
 ```

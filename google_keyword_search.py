@@ -8,18 +8,21 @@
 如果當前頁面沒有找到關鍵字，會自動翻到下一頁繼續搜尋。
 腳本包含防機器人檢測功能，模擬人類行為並處理Google驗證碼。
 腳本支援搜尋多個目標關鍵字，並在點擊進入結果頁面後模擬使用者行為。
+腳本支援使用GSA Proxy獲取代理，實現IP輪換功能，避免被搜尋引擎封鎖。
 
 使用方法:
-    python google_keyword_search.py [搜尋詞] [目標關鍵字1] [目標關鍵字2] ...
+    python google_keyword_search.py [搜尋詞] [目標關鍵字1] [目標關鍵字2] ... [--proxy-file PROXY_FILE]
 
 例如:
     python google_keyword_search.py "Python 教學" "Django" "Flask"
+    python google_keyword_search.py "Python 教學" "Django" "Flask" --proxy-file proxies.txt
 """
 
 import sys
 import time
 import random
 import logging
+import argparse
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
@@ -30,6 +33,15 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import NoSuchElementException, TimeoutException, ElementNotInteractableException
 
+# 導入代理管理器
+try:
+    from proxy_manager import ProxyManager
+    PROXY_SUPPORT = True
+except ImportError:
+    PROXY_SUPPORT = False
+    logging.warning("未找到proxy_manager模塊，代理功能將被禁用")
+    print("⚠️ 未找到proxy_manager模塊，代理功能將被禁用")
+
 # 設置日誌
 logging.basicConfig(
     level=logging.INFO,
@@ -38,8 +50,8 @@ logging.basicConfig(
 )
 
 
-def setup_driver():
-    """設置並返回Chrome WebDriver，添加更多人為特徵"""
+def setup_driver(proxy_manager=None):
+    """設置並返回Chrome WebDriver，添加更多人為特徵，支持代理"""
     chrome_options = Options()
     # 取消下面的註釋可以在背景運行Chrome（無界面模式）
     # chrome_options.add_argument("--headless")
@@ -57,6 +69,18 @@ def setup_driver():
         "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:95.0) Gecko/20100101 Firefox/95.0"
     ]
     chrome_options.add_argument(f"--user-agent={random.choice(user_agents)}")
+    
+    # 如果提供了代理管理器，則使用代理
+    if proxy_manager:
+        try:
+            proxy_arg = proxy_manager.get_proxy_for_selenium()
+            if proxy_arg:
+                logging.info(f"使用代理: {proxy_arg}")
+                print(f"✓ 使用代理設置: {proxy_arg}")
+                chrome_options.add_argument(proxy_arg)
+        except Exception as e:
+            logging.error(f"設置代理時出錯: {str(e)}")
+            print(f"❌ 設置代理時出錯: {str(e)}")
     
     # 初始化WebDriver
     driver = webdriver.Chrome(options=chrome_options)
