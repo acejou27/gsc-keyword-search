@@ -23,6 +23,8 @@ import time
 import random
 import logging
 import csv
+import argparse # Added argparse
+from urllib.parse import quote_plus
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
@@ -32,6 +34,9 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import NoSuchElementException, TimeoutException, ElementNotInteractableException
+
+# 導入 proxy_manager
+from proxy_manager import ProxyManager # Added ProxyManager import
 
 # 導入原始腳本中的函數
 from google_keyword_search import (
@@ -119,7 +124,7 @@ def read_csv_keywords(csv_file_path):
         return []
 
 
-def process_keyword_pair(search_query, target_keywords, max_pages=10, search_keywords=None):
+def process_keyword_pair(driver, search_query, target_keywords, max_pages=10, search_keywords=None): # Added driver as parameter, removed proxy_manager initialization from here
     """
     處理搜尋關鍵字和對應的目標關鍵字列表
     
@@ -144,61 +149,42 @@ def process_keyword_pair(search_query, target_keywords, max_pages=10, search_key
     for i, current_search_keyword in enumerate(search_keywords):
         print(f"\n{'#'*20} 使用搜尋關鍵字: {current_search_keyword} {'#'*20}")
         
-        driver = None
+        # driver is now passed as an argument, no need to initialize here
         search_successful = False
         
-        while not search_successful:
-            try:
-                # 初始化瀏覽器，使用新的代理
-                logging.info(f"初始化瀏覽器，準備搜尋關鍵字: {current_search_keyword}...")
-                # 檢查是否有代理管理器
-                proxy_manager = None
-                if 'proxy_file' in sys.argv:
-                    proxy_file_index = sys.argv.index('proxy_file') + 1
-                    if proxy_file_index < len(sys.argv):
-                        try:
-                            from proxy_manager import ProxyManager
-                            proxy_manager = ProxyManager(proxy_file_path=sys.argv[proxy_file_index])
-                            print(f"✓ 已初始化代理管理器，使用代理文件: {sys.argv[proxy_file_index]}")
-                        except ImportError:
-                            print("⚠️ 未找到proxy_manager模塊，代理功能將被禁用")
-                
-                driver = setup_driver(proxy_manager)
-                if proxy_manager:
-                    current_proxy = proxy_manager.get_next_proxy()
-                
-                # 在Google上搜尋當前關鍵字
-                print(f"\n正在訪問Google搜尋關鍵字: {current_search_keyword}...")
-                
-                if not search_google(driver, current_search_keyword):
-                    print(f"搜尋關鍵字 '{current_search_keyword}' 初始化失敗，將在10秒後重試...")
-                    if driver:
-                        driver.quit()
-                    time.sleep(10)  # 等待10秒
-                    continue  # 重新開始迴圈，再次嘗試初始化和搜尋
-                
-                search_successful = True  # 搜尋成功
-                
-            except Exception as e:
-                logging.error(f"初始化或搜尋關鍵字 '{current_search_keyword}' 過程中發生錯誤: {str(e)}")
-                print(f"\n❌ 初始化或搜尋關鍵字 '{current_search_keyword}' 過程中發生錯誤: {str(e)}")
-                if driver:
-                    driver.quit()
-                print("將在10秒後重試...")
-                time.sleep(10)  # 等待10秒
-                continue  # 重新開始迴圈
+        # 在Google上搜尋當前關鍵字
+        # This part is simplified as driver is managed by main
+        logging.info(f"使用傳入的瀏覽器實例搜尋關鍵字: {current_search_keyword}...")
+        print(f"\n正在訪問Google搜尋關鍵字: {current_search_keyword}...")
+        
+        if not search_google(driver, current_search_keyword):
+            print(f"搜尋關鍵字 '{current_search_keyword}' 失敗。")
+            logging.error(f"搜尋關鍵字 '{current_search_keyword}' 失敗。")
+            # If search_google fails, we might want to log and potentially skip or retry at a higher level.
+            # For now, we'll assume search_google handles its own retries or the main loop will handle driver issues.
+            results[f"{search_query} -> {current_search_keyword} (overall)"] = "Google搜尋初始化失敗"
+            all_keywords_processed = False # Mark as not all processed
+            return results, all_keywords_processed # Return immediately for this search_keyword
+        
+        search_successful = True # Assuming search_google is successful if it returns True
         
         # 搜尋成功後，對每個目標關鍵字進行處理
         for current_target_keyword in target_keywords:
             print(f"\n{'='*20} 在搜尋 '{current_search_keyword}' 中尋找目標關鍵字: {current_target_keyword} {'='*20}")
             
             # 確保我們在正確的搜尋結果頁面
-            if driver.current_url != f"https://www.google.com/search?q={current_search_keyword}":
-                print(f"\n為目標關鍵字 '{current_target_keyword}' 重新導向至Google搜尋頁面...")
+            encoded_search_keyword = quote_plus(current_search_keyword)
+            expected_search_page_prefix = f"https://www.google.com/search?q={encoded_search_keyword}"
+
+            if not driver.current_url.startswith(expected_search_page_prefix):
+                print(f"  偵測到URL不符或已離開搜尋頁面。")
+                print(f"  目前URL: {driver.current_url}")
+                print(f"  預期URL應以 '{expected_search_page_prefix}' 開頭。")
+                print(f"  將為目標關鍵字 '{current_target_keyword}' (於 '{current_search_keyword}' 的搜尋結果中) 重新導向至Google搜尋頁面...")
                 if not search_google(driver, current_search_keyword):
-                    print(f"為目標關鍵字 '{current_target_keyword}' 重新搜尋失敗，跳過此關鍵字...")
+                    print(f"  為目標關鍵字 '{current_target_keyword}' 重新搜尋 '{current_search_keyword}' 失敗，跳過此目標關鍵字...")
                     all_keywords_processed = False
-                    results[f"{current_search_keyword} -> {current_target_keyword}"] = "搜尋失敗"
+                    results[f"{current_search_keyword} -> {current_target_keyword}"] = "重新搜尋失敗"
                     continue
 
         try:
@@ -261,101 +247,219 @@ def process_keyword_pair(search_query, target_keywords, max_pages=10, search_key
             print(f"❌ 處理搜尋關鍵字 '{current_search_keyword}' 中的目標關鍵字 '{current_target_keyword}' 時出錯: {str(e)}")
             results[f"{current_search_keyword} -> {current_target_keyword}"] = f"處理出錯: {str(e)}"
     
-        # 每個搜尋關鍵字處理完畢後關閉瀏覽器
-        try:
-            if driver:
-                driver.quit()
-                logging.info(f"已關閉搜尋關鍵字 '{current_search_keyword}' 的瀏覽器")
-                print(f"✓ 已關閉搜尋關鍵字 '{current_search_keyword}' 的瀏覽器")
-        except Exception as e:
-            logging.error(f"關閉搜尋關鍵字 '{current_search_keyword}' 的瀏覽器時出錯: {str(e)}")
-            print(f"❌ 關閉搜尋關鍵字 '{current_search_keyword}' 的瀏覽器時出錯: {str(e)}")
-        
-        # 在處理下一個搜尋關鍵字前暫停一段時間，避免過於頻繁的請求
+        # Driver is managed by main(), so no driver.quit() here
+        # Pause between processing different target_keywords for the same search_keyword if needed, or between search_keywords in main loop
+        # The pause between different search_keywords (from the search_keywords list) is handled in this loop
         if i < len(search_keywords) - 1:
             wait_time = random.uniform(3.0, 8.0)
-            print(f"\n等待 {wait_time:.1f} 秒後處理下一個搜尋關鍵字...")
+            logging.info(f"完成 '{current_search_keyword}' 的目標關鍵字處理，等待 {wait_time:.1f} 秒後處理此CSV列中的下一個搜尋關鍵字...")
+            print(f"\n完成 '{current_search_keyword}' 的目標關鍵字處理，等待 {wait_time:.1f} 秒後處理此CSV列中的下一個搜尋關鍵字...")
             time.sleep(wait_time)
     
     return results, all_keywords_processed
 
 
 def main():
-    # 解析命令行參數
-    if len(sys.argv) < 2:
-        print("使用方法: python google_keyword_search_csv.py [CSV檔案路徑] [最大頁數(可選)]")
-        print("例如: python google_keyword_search_csv.py keywords.csv 5")
-        return
-    
-    csv_file_path = sys.argv[1]
-    max_pages = 5  # 默認最多搜尋5頁
-    
-    # 如果提供了最大頁數參數
-    if len(sys.argv) > 2 and sys.argv[2].isdigit():
-        try:
-            max_pages = int(sys.argv[2])
-        except ValueError:
-            print(f"警告: 無效的頁數參數 '{sys.argv[2]}'，將使用預設值 {max_pages}")
-    
-    # 從CSV檔案讀取關鍵字對
-    keyword_pairs = read_csv_keywords(csv_file_path)
-    if not keyword_pairs:
-        return
-    
-    print(f"\n{'='*50}")
-    print(f"開始處理 {len(keyword_pairs)} 組關鍵字對")
-    print(f"最大搜尋頁數: {max_pages}")
-    print(f"{'='*50}\n")
-    
-    # 處理每一組關鍵字對
-    all_results = {}
-    for i, (search_query, target_keywords, search_keywords) in enumerate(keyword_pairs):
-        print(f"\n{'#'*50}")
-        print(f"處理第 {i+1}/{len(keyword_pairs)} 組關鍵字對")
-        print(f"主要搜尋詞: {search_query}")
-        print(f"所有搜尋關鍵字: {search_keywords}")
-        print(f"目標關鍵字: {target_keywords[0]}")
-        print(f"{'#'*50}\n")
-        
-        # 處理搜尋詞和對應的目標關鍵字列表，傳入所有搜尋關鍵字
-        results, success = process_keyword_pair(search_query, target_keywords, max_pages, search_keywords)
-        all_results[search_query] = results
-        
-        # 在處理下一組關鍵字前暫停一段時間，避免過於頻繁的請求
-        if i < len(keyword_pairs) - 1:
-            wait_time = random.uniform(3.0, 8.0)
-            print(f"\n等待 {wait_time:.1f} 秒後處理下一組關鍵字...")
-            time.sleep(wait_time)
-    
-    # 輸出所有結果摘要
-    print(f"\n{'='*50}")
-    print("搜尋結果摘要:")
-    print(f"{'='*50}")
-    
-    for search_query, results in all_results.items():
-        print(f"\n主要搜尋詞: {search_query}")
-        # 按搜尋關鍵字分組顯示結果
-        search_keyword_groups = {}
-        for result_key, result_value in results.items():
-            if " -> " in result_key:
-                search_keyword, target_keyword = result_key.split(" -> ")
-                if search_keyword not in search_keyword_groups:
-                    search_keyword_groups[search_keyword] = []
-                search_keyword_groups[search_keyword].append((target_keyword, result_value))
-            else:
-                # 兼容舊格式的結果
-                print(f"  - {result_key}: {result_value}")
-        
-        # 顯示分組結果
-        for search_keyword, target_results in search_keyword_groups.items():
-            print(f"  搜尋關鍵字: {search_keyword}")
-            for target_keyword, result in target_results:
-                print(f"    - 目標關鍵字 '{target_keyword}': {result}")
-    
-    print(f"\n{'='*50}")
-    print("搜尋完成!")
-    print(f"{'='*50}\n")
+    parser = argparse.ArgumentParser(
+        description="網頁關鍵字搜尋工具 - CSV版本",
+        formatter_class=argparse.RawTextHelpFormatter,
+        epilog="CSV檔案格式範例 (每行一個搜尋任務，第一個是主要搜尋詞，後面是目標關鍵字):\n  Python 教學,Django,Flask\n  AI 工具,ChatGPT"
+    )
+    parser.add_argument("csv_file", help="包含搜尋關鍵字和目標關鍵字的CSV檔案路徑")
+    parser.add_argument("max_pages", type=int, nargs='?', default=5, help="最大搜尋頁數 (預設: 5)")
+    parser.add_argument("--proxy-file", help="代理伺服器列表檔案路徑 (每行一個代理，格式 ip:port 或 ip:port:user:pass)")
 
+    args = parser.parse_args()
+
+    if args.max_pages <= 0:
+        logging.error("最大頁數必須是正整數")
+        print("❌ 最大頁數必須是正整數")
+        sys.exit(1)
+
+    keyword_pairs = read_csv_keywords(args.csv_file)
+    if not keyword_pairs:
+        logging.error("CSV檔案中沒有有效的關鍵字對，或讀取失敗")
+        print("❌ CSV檔案中沒有有效的關鍵字對，或讀取失敗。請檢查檔案路徑和內容格式。")
+        sys.exit(1)
+
+    proxy_manager = None
+    if args.proxy_file:
+        try:
+            proxy_manager = ProxyManager(proxy_file_path=args.proxy_file)
+            logging.info(f"已初始化代理管理器，使用代理文件: {args.proxy_file}")
+            print(f"✓ 已初始化代理管理器，使用代理文件: {args.proxy_file}")
+        except Exception as e:
+            logging.warning(f"初始化代理管理器失敗: {e}，將不使用代理")
+            print(f"⚠️ 初始化代理管理器失敗: {e}，將不使用代理")
+
+    driver = None
+    all_results_summary = {}
+
+    try:
+        logging.info("初始化瀏覽器驅動程式...")
+        driver = setup_driver(proxy_manager) # Proxy_manager can be None
+        if not driver:
+            logging.error("瀏覽器驅動程式初始化失敗，無法繼續。")
+            print("❌ 瀏覽器驅動程式初始化失敗，無法繼續。")
+            sys.exit(1)
+        logging.info("瀏覽器驅動程式初始化成功。")
+        print("✓ 瀏覽器驅動程式初始化成功。")
+
+        print(f"\n{'='*50}")
+        print(f"開始處理 {len(keyword_pairs)} 組CSV項目")
+        print(f"最大搜尋頁數: {args.max_pages}")
+        if proxy_manager and proxy_manager.get_proxies():
+            print(f"使用代理數量: {len(proxy_manager.get_proxies())}")
+        else:
+            print("不使用代理")
+        print(f"{'='*50}\n")
+
+        for i, (main_search_query_from_csv, target_keywords_from_csv, all_search_keywords_from_csv) in enumerate(keyword_pairs):
+            print(f"\n{'#'*50}")
+            logging.info(f"處理CSV項目 {i+1}/{len(keyword_pairs)}: 主要搜尋詞='{main_search_query_from_csv}', 目標={target_keywords_from_csv}, 所有搜尋詞={all_search_keywords_from_csv}")
+            print(f"處理CSV項目 {i+1}/{len(keyword_pairs)}")
+            print(f"  主要搜尋詞 (來自CSV): {main_search_query_from_csv}")
+            print(f"  所有搜尋詞 (來自CSV此行): {all_search_keywords_from_csv}")
+            print(f"  目標關鍵字 (來自CSV此行): {target_keywords_from_csv}")
+            print(f"{'#'*50}\n")
+
+            # process_keyword_pair 現在處理單個 search_query 和其 target_keywords
+            # all_search_keywords_from_csv 包含了此CSV行定義的所有搜尋詞，我們將遍歷它們
+            # main_search_query_from_csv 是此CSV行的第一個搜尋詞，用於結果聚合的key
+            
+            current_csv_row_results = {}
+            # The `all_search_keywords_from_csv` from `read_csv_keywords` is a list containing just the main search query for now.
+            # If `read_csv_keywords` is updated to return multiple search terms per CSV line, this loop will handle it.
+            # For now, it will effectively loop once with `main_search_query_from_csv`.
+            for search_keyword_to_use in all_search_keywords_from_csv: 
+                logging.info(f"針對CSV項目 '{main_search_query_from_csv}', 使用搜尋詞 '{search_keyword_to_use}' 進行Google搜尋, 目標: {target_keywords_from_csv}")
+                # The `search_keywords` parameter for `process_keyword_pair` should be the list of *all* search keywords for that CSV row.
+                # However, `process_keyword_pair` itself iterates through `search_keywords`. 
+                # To avoid nested iteration logic confusion, we'll pass only the current search_keyword_to_use and its targets.
+                # The `process_keyword_pair` will then iterate through its `target_keywords` for this `search_keyword_to_use`.
+                # The `search_keywords` argument to `process_keyword_pair` is a bit misleading in its current form if it's meant for the *inner* loop.
+                # Let's adjust `process_keyword_pair` or how we call it.
+                # For now, `process_keyword_pair` expects a single `search_query` and a list of `target_keywords`.
+                # The `search_keywords` param in `process_keyword_pair` is used for its internal loop over search terms.
+                # We will call `process_keyword_pair` for each `search_keyword_to_use` from the CSV row.
+                
+                # The `process_keyword_pair` function's internal loop `for i, current_search_keyword in enumerate(search_keywords):`
+                # should actually be based on `target_keywords` if `search_query` is the primary search term.
+                # Re-evaluating: `process_keyword_pair` takes ONE `search_query` and a list of `target_keywords`.
+                # The `search_keywords` parameter in `process_keyword_pair` seems to be for iterating different search terms *within* that call, which is confusing.
+                # Let's simplify: `process_keyword_pair` will handle one `search_query` and its `target_keywords`.
+                # The loop over `all_search_keywords_from_csv` will call `process_keyword_pair` multiple times if a CSV row has multiple search terms.
+
+                # Corrected call: Pass the single search_keyword_to_use and its associated target_keywords_from_csv.
+                # The `search_keywords` argument in `process_keyword_pair` is for the list of *all* search terms for context/logging, not for iteration inside it.
+                # The iteration over `search_keywords` within `process_keyword_pair` needs to be removed or rethought.
+                # For now, we assume `process_keyword_pair` is modified to take the driver and a *single* search_query, and its targets.
+                # The `search_keywords` list in `process_keyword_pair` was used to iterate and re-init driver. This is now done in main.
+                # So, `process_keyword_pair` should now take `driver`, `current_search_keyword_to_use`, `target_keywords_from_csv`.
+                # The internal loop `for i, current_search_keyword in enumerate(search_keywords):` in `process_keyword_pair` should be removed.
+                # The `search_query` parameter of `process_keyword_pair` will be `search_keyword_to_use`.
+                # The `search_keywords` parameter of `process_keyword_pair` can be `all_search_keywords_from_csv` for context if needed by `find_keyword_on_page` etc.
+
+                # The `process_keyword_pair` will now be called for each `search_keyword_to_use` from the CSV row.
+                # It will use the passed `driver` instance.
+                # The `search_keywords` parameter in `process_keyword_pair` is the list of all search terms from the CSV row for context.
+                # The primary iteration over search terms from the CSV row is happening here in `main`.
+                
+                # The `process_keyword_pair` function should be refactored to process ONE search_query against its target_keywords using the provided driver.
+                # The loop `for i, current_search_keyword in enumerate(search_keywords):` inside `process_keyword_pair` should be removed.
+                # The `search_query` argument to `process_keyword_pair` will be `search_keyword_to_use`.
+
+                # Simplified call assuming process_keyword_pair is refactored:
+                # results_for_this_search_term, success = process_keyword_pair(driver, search_keyword_to_use, target_keywords_from_csv, args.max_pages)
+                # For now, we stick to the existing structure of process_keyword_pair and pass all_search_keywords_from_csv as its search_keywords parameter.
+                # This means process_keyword_pair will internally loop through all_search_keywords_from_csv. This is redundant with the outer loop here.
+                # This needs to be fixed. Let's assume `process_keyword_pair` is refactored to take ONE search_query and its targets.
+                # And the loop over `all_search_keywords_from_csv` is the correct place to iterate if a CSV row can have multiple search queries.
+                # For now, `all_search_keywords_from_csv` from `read_csv_keywords` is `[search_query]`. So this outer loop runs once per CSV row.
+
+                # Let's assume `process_keyword_pair` is refactored to: 
+                # process_keyword_pair(driver, current_search_keyword_for_google, target_keywords_for_this_search, max_pages)
+                # And it returns results for *that specific* current_search_keyword_for_google.
+                
+                # The current `process_keyword_pair` iterates `search_keywords` internally. 
+                # We will call it once per CSV row, passing `main_search_query_from_csv` as the primary query for result aggregation, 
+                # and `all_search_keywords_from_csv` for its internal iteration if that's how it's designed.
+                # This is not ideal but matches the existing structure of `process_keyword_pair` more closely without major internal rewrite of it yet.
+
+                # The `search_query` parameter to `process_keyword_pair` is the *main* query for the CSV line (for result keying).
+                # The `search_keywords` parameter is the list of actual keywords to search on Google (from that CSV line).
+                results_for_csv_line, _ = process_keyword_pair(driver, main_search_query_from_csv, target_keywords_from_csv, args.max_pages, all_search_keywords_from_csv)
+                current_csv_row_results.update(results_for_csv_line)
+            
+            all_results_summary[main_search_query_from_csv] = current_csv_row_results
+
+            if i < len(keyword_pairs) - 1:
+                wait_time = random.uniform(5.0, 10.0) # Increased wait time between CSV entries
+                logging.info(f"完成CSV項目 '{main_search_query_from_csv}' 的處理，等待 {wait_time:.1f} 秒後處理下一個CSV項目...")
+                print(f"\n完成CSV項目 '{main_search_query_from_csv}' 的處理，等待 {wait_time:.1f} 秒後處理下一個CSV項目...")
+                time.sleep(wait_time)
+
+        print(f"\n{'='*50}")
+        print("🎉 所有CSV項目處理完成")
+        logging.info("所有CSV項目處理完成")
+
+    except KeyboardInterrupt:
+        logging.warning("使用者手動中斷程式")
+        print("\n⚠️ 使用者手動中斷程式...")
+    except Exception as e:
+        logging.error(f"主處理過程中發生未預期錯誤: {e}", exc_info=True)
+        print(f"❌ 主處理過程中發生未預期錯誤: {e}")
+    finally:
+        if driver:
+            logging.info("關閉瀏覽器驅動程式...")
+            try:
+                driver.quit()
+                logging.info("瀏覽器驅動程式已關閉。")
+                print("✓ 瀏覽器驅動程式已關閉。")
+            except Exception as e:
+                logging.error(f"關閉瀏覽器時發生錯誤: {e}")
+                print(f"❌ 關閉瀏覽器時發生錯誤: {e}")
+
+    # 輸出所有結果摘要
+    print(f"\n{'='*60}")
+    print("最終搜尋結果摘要:")
+    print(f"{'='*60}")
+    
+    if not all_results_summary:
+        print("沒有處理任何結果。")
+    else:
+        for main_csv_query, results_for_main_query in all_results_summary.items():
+            print(f"\n📜 CSV 主要搜尋詞: {main_csv_query}")
+            if not results_for_main_query:
+                print("  - 此CSV項目沒有結果。")
+                continue
+
+            # Group results by the actual search keyword used for Google search
+            # The keys in results_for_main_query are like "ActualSearchKeyword -> TargetKeyword"
+            grouped_by_actual_search = {}
+            for result_key, result_value in results_for_main_query.items():
+                if " -> " in result_key:
+                    actual_search_term, target = result_key.split(" -> ", 1)
+                    if actual_search_term not in grouped_by_actual_search:
+                        grouped_by_actual_search[actual_search_term] = []
+                    grouped_by_actual_search[actual_search_term].append({'target': target, 'status': result_value})
+                else:
+                    # Fallback for unexpected result_key format
+                    if "_direct_" not in grouped_by_actual_search:
+                         grouped_by_actual_search["_direct_"] = []
+                    grouped_by_actual_search["_direct_"].append({'target': result_key, 'status': result_value})
+            
+            for actual_term, target_details_list in grouped_by_actual_search.items():
+                if actual_term != "_direct_":
+                    print(f"  🔍 Google搜尋使用: {actual_term}")
+                else:
+                    print("  (直接結果):") # Should not happen with current structure
+                for detail in target_details_list:
+                    print(f"    🎯 目標 '{detail['target']}': {detail['status']}")
+    
+    print(f"\n{'='*60}")
+    print("👋 搜尋程序結束")
+    print(f"{'='*60}\n")
 
 if __name__ == "__main__":
     main()
