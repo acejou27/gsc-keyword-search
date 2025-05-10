@@ -1,4 +1,4 @@
-# 網頁關鍵字搜尋工具
+# GSC關鍵字搜索工具
 
 這個工具可以在Google搜尋結果中自動尋找特定關鍵字，如果當前頁面沒有找到則自動翻到下一頁繼續搜尋。
 
@@ -33,16 +33,28 @@ pip install selenium
 
 ## 使用方法
 
-### 基本使用
+### 方法一：使用啟動腳本（推薦）
+
+1. 運行啟動腳本：
+
+   ```bash
+   python3 start.py
+   ```
+   
+   注意：在macOS系統上，請使用`python3`命令而不是`python`命令。
+
+2. 按照提示選擇功能並輸入相關參數。
+
+### 方法二：基本使用
 
 ```bash
-python google_keyword_search.py [搜尋詞] [目標關鍵字]
+python3 google_keyword_search.py [搜尋詞] [目標關鍵字]
 ```
 
 ### 例如：
 
 ```bash
-python google_keyword_search.py "Python 教學" "Django"
+python3 google_keyword_search.py "Python 教學" "Django"
 ```
 
 這將在Google上搜尋「Python 教學」，然後在搜尋結果中尋找「Django」這個關鍵字。
@@ -52,13 +64,13 @@ python google_keyword_search.py "Python 教學" "Django"
 使用新的main.py腳本可以啟用代理功能，支持GSA Proxy導出的代理列表：
 
 ```bash
-python main.py [搜尋詞] [目標關鍵字] --proxy-file [代理文件路徑]
+python3 main.py [搜尋詞] [目標關鍵字] --proxy-file [代理文件路徑]
 ```
 
 例如：
 
 ```bash
-python main.py "Python 教學" "Django" --proxy-file proxies.txt
+python3 main.py "Python 教學" "Django" --proxy-file proxies.txt
 ```
 
 ### 代理文件格式
@@ -73,7 +85,7 @@ python main.py "Python 教學" "Django" --proxy-file proxies.txt
 ### 完整命令行參數
 
 ```bash
-python main.py [搜尋詞] [目標關鍵字] [選項]
+python3 main.py [搜尋詞] [目標關鍵字] [選項]
 ```
 
 可用選項：
@@ -87,7 +99,7 @@ python main.py [搜尋詞] [目標關鍵字] [選項]
 ### CSV模式使用方法
 
 ```bash
-python google_keyword_search_csv.py keywords.csv [最大頁數]
+python3 google_keyword_search_csv.py keywords.csv [最大頁數]
 ```
 
 #### CSV格式

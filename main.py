@@ -96,9 +96,9 @@ def main():
             if hasattr(args, 'gsa_api_url') and args.gsa_api_url:
                 print(f"🌐 GSA API URL: {args.gsa_api_url}")
     
-    # 初始化WebDriver
+    # 初始化WebDriver，使用新的代理
     driver = setup_driver(proxy_manager)
-    current_proxy = proxy_manager.get_proxy() if proxy_manager else None
+    current_proxy = proxy_manager.get_next_proxy() if proxy_manager else None
     
     try:
         # 搜尋Google
@@ -121,9 +121,9 @@ def main():
             except:
                 pass
             
-            # 重新初始化WebDriver（可能使用新代理）
+            # 重新初始化WebDriver（使用新代理）
             driver = setup_driver(proxy_manager)
-            current_proxy = proxy_manager.get_proxy() if proxy_manager else None
+            current_proxy = proxy_manager.get_next_proxy() if proxy_manager else None
             
             # 重新嘗試搜尋
             search_success = search_google(driver, search_query)

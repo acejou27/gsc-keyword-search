@@ -57,10 +57,10 @@ logging.basicConfig(
 def read_csv_keywords(csv_file_path):
     """
     從CSV檔案讀取搜尋關鍵字和目標關鍵字
-    CSV格式：關鍵字1,關鍵字2,關鍵字3,目標關鍵字
+    CSV格式：搜尋關鍵字,目標關鍵字
     
-    返回：包含(搜尋關鍵字, [目標關鍵字], [所有搜尋關鍵字])元組的列表，其中第一個關鍵字作為主要搜尋詞，
-    最後一個關鍵字作為目標關鍵字，中間的所有關鍵字也會被用於搜尋
+    返回：包含(搜尋關鍵字, [目標關鍵字], [所有搜尋關鍵字])元組的列表
+    支持每行包含不同的搜尋關鍵字和目標關鍵字組合
     """
     keyword_pairs = []
     
@@ -68,41 +68,37 @@ def read_csv_keywords(csv_file_path):
         with open(csv_file_path, 'r', encoding='utf-8') as csvfile:
             csv_reader = csv.reader(csvfile)
             for row in csv_reader:
-                if not row or len(row) < 2 or not row[0].strip():
+                # 跳過空行或格式不正確的行
+                if not row or not row[0].strip():
                     logging.warning(f"跳過無效行: {row}")
                     continue
-                    
-                # 確保行中至少有兩個元素（至少一個搜尋關鍵字和一個目標關鍵字）
-                if len(row) < 2:
-                    logging.warning(f"行格式不正確，需要至少一個搜尋關鍵字和一個目標關鍵字: {row}")
+                
+                # 處理CSV行，支持多種格式
+                # 如果只有一個元素，將其作為搜尋關鍵字，目標關鍵字設為空
+                if len(row) == 1:
+                    search_query = row[0].strip()
+                    if search_query:
+                        keyword_pairs.append((search_query, [], [search_query]))
+                        logging.info(f"讀取到搜尋關鍵字: {search_query}，無目標關鍵字")
                     continue
                 
-                # 最後一個關鍵字作為目標關鍵字
-                target_keyword = row[-1].strip() if row[-1].strip() else None
+                # 處理標準格式：搜尋關鍵字,目標關鍵字
+                search_query = row[0].strip()
+                target_keywords = []
                 
-                if not target_keyword:
-                    logging.warning(f"沒有有效的目標關鍵字，跳過此行: {row}")
-                    continue
-                
-                # 收集所有搜尋關鍵字（除了最後一個目標關鍵字）
-                search_keywords = []
-                for i in range(len(row) - 1):
+                # 收集所有目標關鍵字（從第二個元素開始）
+                for i in range(1, len(row)):
                     keyword = row[i].strip()
                     if keyword:
-                        search_keywords.append(keyword)
+                        target_keywords.append(keyword)
                 
-                if not search_keywords:
+                if not search_query:
                     logging.warning(f"沒有有效的搜尋關鍵字，跳過此行: {row}")
                     continue
                 
-                # 第一個關鍵字作為主要搜尋詞
-                primary_search_query = search_keywords[0]
-                
-                # 將目標關鍵字放入列表中，以保持與原有代碼兼容
-                # 同時將所有搜尋關鍵字作為第三個元素返回
-                keyword_pairs.append((primary_search_query, [target_keyword], search_keywords))
-                
-                logging.info(f"讀取到搜尋關鍵字: {search_keywords}，目標關鍵字: {target_keyword}")
+                # 將搜尋關鍵字和目標關鍵字添加到列表中
+                keyword_pairs.append((search_query, target_keywords, [search_query]))
+                logging.info(f"讀取到搜尋關鍵字: {search_query}，目標關鍵字: {target_keywords}")
                 
         if not keyword_pairs:
             logging.error("CSV檔案中沒有有效的關鍵字對")
@@ -153,9 +149,23 @@ def process_keyword_pair(search_query, target_keywords, max_pages=10, search_key
         
         while not search_successful:
             try:
-                # 初始化瀏覽器
+                # 初始化瀏覽器，使用新的代理
                 logging.info(f"初始化瀏覽器，準備搜尋關鍵字: {current_search_keyword}...")
-                driver = setup_driver()
+                # 檢查是否有代理管理器
+                proxy_manager = None
+                if 'proxy_file' in sys.argv:
+                    proxy_file_index = sys.argv.index('proxy_file') + 1
+                    if proxy_file_index < len(sys.argv):
+                        try:
+                            from proxy_manager import ProxyManager
+                            proxy_manager = ProxyManager(proxy_file_path=sys.argv[proxy_file_index])
+                            print(f"✓ 已初始化代理管理器，使用代理文件: {sys.argv[proxy_file_index]}")
+                        except ImportError:
+                            print("⚠️ 未找到proxy_manager模塊，代理功能將被禁用")
+                
+                driver = setup_driver(proxy_manager)
+                if proxy_manager:
+                    current_proxy = proxy_manager.get_next_proxy()
                 
                 # 在Google上搜尋當前關鍵字
                 print(f"\n正在訪問Google搜尋關鍵字: {current_search_keyword}...")

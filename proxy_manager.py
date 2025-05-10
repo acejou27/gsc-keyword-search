@@ -168,6 +168,35 @@ class ProxyManager:
         
         logging.info(f"選擇代理: {selected_proxy['proxy']}")
         return selected_proxy["proxy"]
+        
+    def get_next_proxy(self):
+        """獲取下一個代理，確保每次搜索都使用新的代理"""
+        # 刷新代理列表
+        self.refresh_proxies()
+        
+        # 如果沒有可用代理，返回None
+        if not self.proxies:
+            logging.warning("沒有可用的代理")
+            print("⚠️ 沒有可用的代理，將直接連接")
+            return None
+        
+        # 過濾出未達到最大失敗次數的代理
+        valid_proxies = [p for p in self.proxies if p["failed_attempts"] < self.max_failed_attempts]
+        if not valid_proxies:
+            logging.warning("所有代理都已達到最大失敗次數")
+            print("⚠️ 所有代理都已達到最大失敗次數，將重置代理列表")
+            # 重置所有代理的失敗次數
+            for proxy in self.proxies:
+                proxy["failed_attempts"] = 0
+            valid_proxies = self.proxies
+        
+        # 隨機選擇一個代理，確保每次搜索都使用不同的代理
+        selected_proxy = random.choice(valid_proxies)
+        selected_proxy["last_used"] = time.time()
+        
+        logging.info(f"切換到新代理: {selected_proxy['proxy']}")
+        print(f"✓ 切換到新代理: {selected_proxy['proxy']}")
+        return selected_proxy["proxy"]
     
     def mark_proxy_invalid(self, proxy):
         """標記代理為無效，增加失敗次數"""
