@@ -144,6 +144,7 @@ def process_keyword_pair(driver, search_query, target_keywords, max_pages=10, se
     
     all_keywords_processed = True
     results = {}
+    driver_died = False # NEW: Flag to indicate if driver died
     
     # 對每個搜尋關鍵字單獨進行搜尋
     for i, current_search_keyword in enumerate(search_keywords):
@@ -160,11 +161,10 @@ def process_keyword_pair(driver, search_query, target_keywords, max_pages=10, se
         if not search_google(driver, current_search_keyword):
             print(f"搜尋關鍵字 '{current_search_keyword}' 失敗。")
             logging.error(f"搜尋關鍵字 '{current_search_keyword}' 失敗。")
-            # If search_google fails, we might want to log and potentially skip or retry at a higher level.
-            # For now, we'll assume search_google handles its own retries or the main loop will handle driver issues.
-            results[f"{search_query} -> {current_search_keyword} (overall)"] = "Google搜尋初始化失敗"
+            results[f"{search_query} -> {current_search_keyword} (overall)"] = "Google搜尋初始化失敗 (CAPTCHA?)"
             all_keywords_processed = False # Mark as not all processed
-            return results, all_keywords_processed # Return immediately for this search_keyword
+            driver_died = True # NEW: Signal driver death
+            break # NEW: Exit this loop as driver is dead
         
         search_successful = True # Assuming search_google is successful if it returns True
         
@@ -187,67 +187,90 @@ def process_keyword_pair(driver, search_query, target_keywords, max_pages=10, se
                     results[f"{current_search_keyword} -> {current_target_keyword}"] = "重新搜尋失敗"
                     continue
 
-        try:
-            page_num = 1
-            found_current_keyword = False
-            clicked_current_keyword = False
-            captcha_retry_count = 0
-            max_captcha_retries = 3  # 最多重試3次
+            try:
+                page_num = 1
+                found_current_keyword = False
+                clicked_current_keyword = False
+                # captcha_retry_count = 0 # OLD: This internal retry is removed
+                # max_captcha_retries = 3  # OLD: Max retries for CAPTCHA within this function
             
-            while page_num <= max_pages:
-                logging.info(f"正在為 '{current_search_keyword}' 搜尋中尋找目標關鍵字 '{current_target_keyword}' 第 {page_num} 頁")
-                print(f"\n正在為 '{current_search_keyword}' 搜尋中尋找目標關鍵字 '{current_target_keyword}' 第 {page_num} 頁...")
-                
-                # 在當前頁面查找關鍵字
-                found_current_keyword = find_keyword_on_page(driver, current_target_keyword)
-                
-                # 處理驗證碼情況
-                if found_current_keyword is False and (driver is None or not driver.service.is_connectable()):
-                    # 驗證碼處理邏輯...
-                    captcha_retry_count += 1
-                    if captcha_retry_count > max_captcha_retries:
-                        results[f"{current_search_keyword} -> {current_target_keyword}"] = "驗證碼重試次數已達上限"
-                        break
-                    # 重新初始化瀏覽器邏輯...
-                    continue
-                
-                if found_current_keyword is True:
-                    logging.info(f"成功在 '{current_search_keyword}' 搜尋的第 {page_num} 頁找到目標關鍵字 '{current_target_keyword}'")
-                    print(f"成功在 '{current_search_keyword}' 搜尋的第 {page_num} 頁找到目標關鍵字 '{current_target_keyword}'")
-                    results[f"{current_search_keyword} -> {current_target_keyword}"] = f"在第 {page_num} 頁找到"
+                while page_num <= max_pages:
+                    logging.info(f"正在為 '{current_search_keyword}' 搜尋中尋找目標關鍵字 '{current_target_keyword}' 第 {page_num} 頁")
+                    print(f"\n正在為 '{current_search_keyword}' 搜尋中尋找目標關鍵字 '{current_target_keyword}' 第 {page_num} 頁...")
                     
-                    # 嘗試點擊包含關鍵字的搜尋結果
-                    clicked_current_keyword = find_and_click_result(driver, current_target_keyword)
+                    # 在當前頁面查找關鍵字
+                    found_current_keyword = find_keyword_on_page(driver, current_target_keyword)
                     
-                    # 處理點擊時的驗證碼情況...
+                    # 處理驗證碼情況
+                    if found_current_keyword is False:
+                        # Check if driver died (e.g., due to CAPTCHA handled by find_keyword_on_page)
+                        if not driver.service.is_connectable():
+                            logging.warning(f"CAPTCHA or driver issue detected after find_keyword_on_page for '{current_target_keyword}' in '{current_search_keyword}'. Driver closed.")
+                            print(f"⚠️ CAPTCHA or driver issue detected for '{current_target_keyword}' in '{current_search_keyword}'.")
+                            results[f"{current_search_keyword} -> {current_target_keyword}"] = "CAPTCHA/Driver中止 (find_keyword_on_page)"
+                            driver_died = True
+                            break # Exit while page_num loop
                     
-                    if clicked_current_keyword is True:
-                        results[f"{current_search_keyword} -> {current_target_keyword}"] = f"在第 {page_num} 頁找到並成功點擊"
-                        break  # 找到並點擊後，處理下一個關鍵字
+                    if found_current_keyword is True:
+                        logging.info(f"成功在 '{current_search_keyword}' 搜尋的第 {page_num} 頁找到目標關鍵字 '{current_target_keyword}'")
+                        print(f"成功在 '{current_search_keyword}' 搜尋的第 {page_num} 頁找到目標關鍵字 '{current_target_keyword}'")
+                        results[f"{current_search_keyword} -> {current_target_keyword}"] = f"在第 {page_num} 頁找到"
+                        
+                        # 嘗試點擊包含關鍵字的搜尋結果
+                        clicked_current_keyword = find_and_click_result(driver, current_target_keyword)
+                        
+                        if clicked_current_keyword is False:
+                            if not driver.service.is_connectable():
+                                logging.warning(f"CAPTCHA or driver issue detected after find_and_click_result for '{current_target_keyword}' in '{current_search_keyword}'. Driver closed.")
+                                print(f"⚠️ CAPTCHA or driver issue detected during click for '{current_target_keyword}' in '{current_search_keyword}'.")
+                                results[f"{current_search_keyword} -> {current_target_keyword}"] = "CAPTCHA/Driver中止 (find_and_click_result)"
+                                driver_died = True
+                                break # Exit while page_num loop
+                        
+                        if clicked_current_keyword is True:
+                            results[f"{current_search_keyword} -> {current_target_keyword}"] = f"在第 {page_num} 頁找到並成功點擊"
+                            break  # 找到並點擊後，處理下一個目標關鍵字
+                    
+                    if driver_died: # Check if driver died in previous step
+                        break # Exit while page_num loop
+
+                    # 如果沒找到或沒成功點擊，且還有下一頁，則繼續
+                    next_page_result = go_to_next_page(driver)
+                    
+                    if next_page_result is False:
+                        if not driver.service.is_connectable():
+                            logging.warning(f"CAPTCHA or driver issue detected after go_to_next_page for '{current_search_keyword}'. Driver closed.")
+                            print(f"⚠️ CAPTCHA or driver issue detected during pagination for '{current_search_keyword}'.")
+                            results[f"{current_search_keyword} -> {current_target_keyword}"] = "CAPTCHA/Driver中止 (go_to_next_page)" # Or a general pagination failure message
+                            driver_died = True
+                            break # Exit while page_num loop
+                        else:
+                            # Normal end of pages or non-critical error
+                            print(f"沒有更多頁面或無法翻到下一頁，已搜尋 {page_num} 頁")
+                            if f"{current_search_keyword} -> {current_target_keyword}" not in results:
+                                results[f"{current_search_keyword} -> {current_target_keyword}"] = f"在 {page_num} 頁內未找到"
+                            break # Exit while page_num loop
+                    else:
+                        page_num += 1
                 
-                # 如果沒找到或沒成功點擊，且還有下一頁，則繼續
-                next_page_result = go_to_next_page(driver)
-                
-                # 處理翻頁時的驗證碼情況...
-                
-                if next_page_result is True:
-                    page_num += 1
-                else:
-                    print(f"沒有更多頁面或無法翻到下一頁，已搜尋 {page_num} 頁")
-                    if f"{current_search_keyword} -> {current_target_keyword}" not in results:
-                        results[f"{current_search_keyword} -> {current_target_keyword}"] = f"在 {page_num} 頁內未找到"
-                    break
-            
-            # 如果搜尋完所有頁面仍未找到
-            if f"{current_search_keyword} -> {current_target_keyword}" not in results:
-                results[f"{current_search_keyword} -> {current_target_keyword}"] = f"在 {max_pages} 頁內未找到"
-                
-        except Exception as e:
-            logging.error(f"處理搜尋關鍵字 '{current_search_keyword}' 中的目標關鍵字 '{current_target_keyword}' 時出錯: {str(e)}")
-            print(f"❌ 處理搜尋關鍵字 '{current_search_keyword}' 中的目標關鍵字 '{current_target_keyword}' 時出錯: {str(e)}")
-            results[f"{current_search_keyword} -> {current_target_keyword}"] = f"處理出錯: {str(e)}"
-    
-        # Driver is managed by main(), so no driver.quit() here
+                if driver_died: # If driver died while processing targets for current_search_keyword
+                    break # Exit from the target_keywords loop
+
+                # 如果搜尋完所有頁面仍未找到
+                if f"{current_search_keyword} -> {current_target_keyword}" not in results:
+                    results[f"{current_search_keyword} -> {current_target_keyword}"] = f"在 {max_pages} 頁內未找到"
+                    
+            except Exception as e:
+                logging.error(f"處理搜尋關鍵字 '{current_search_keyword}' 中的目標關鍵字 '{current_target_keyword}' 時出錯: {str(e)}")
+                print(f"❌ 處理搜尋關鍵字 '{current_search_keyword}' 中的目標關鍵字 '{current_target_keyword}' 時出錯: {str(e)}")
+                results[f"{current_search_keyword} -> {current_target_keyword}"] = f"處理出錯: {str(e)}"
+                # If a generic exception occurs, we might not know if driver died, but good to check
+                if not driver.service.is_connectable():
+                    driver_died = True # Assume driver died if connection lost
+        
+        if driver_died: # If driver died while processing current_search_keyword
+            break # Exit from the main search_keywords loop
+
         # Pause between processing different target_keywords for the same search_keyword if needed, or between search_keywords in main loop
         # The pause between different search_keywords (from the search_keywords list) is handled in this loop
         if i < len(search_keywords) - 1:
@@ -256,7 +279,7 @@ def process_keyword_pair(driver, search_query, target_keywords, max_pages=10, se
             print(f"\n完成 '{current_search_keyword}' 的目標關鍵字處理，等待 {wait_time:.1f} 秒後處理此CSV列中的下一個搜尋關鍵字...")
             time.sleep(wait_time)
     
-    return results, all_keywords_processed
+    return results, all_keywords_processed, driver_died # NEW: Return driver_died status
 
 
 def main():
@@ -323,73 +346,56 @@ def main():
             print(f"  目標關鍵字 (來自CSV此行): {target_keywords_from_csv}")
             print(f"{'#'*50}\n")
 
-            # process_keyword_pair 現在處理單個 search_query 和其 target_keywords
-            # all_search_keywords_from_csv 包含了此CSV行定義的所有搜尋詞，我們將遍歷它們
-            # main_search_query_from_csv 是此CSV行的第一個搜尋詞，用於結果聚合的key
+            current_csv_row_results = {} # Initialize results for this CSV row
+            attempt_csv_item = 0
+            max_attempts_csv_item = 3  # Max retries for this CSV item if driver dies
+            csv_item_processed_successfully = False
+
+            while attempt_csv_item < max_attempts_csv_item and not csv_item_processed_successfully:
+                if attempt_csv_item > 0:  # This is a retry for the CSV item
+                    logging.info(f"CSV項目 '{main_search_query_from_csv}' 因驅動程式故障，重試 {attempt_csv_item}/{max_attempts_csv_item -1}...")
+                    print(f"🔄 CSV項目 '{main_search_query_from_csv}' 因驅動程式故障，重試 {attempt_csv_item}/{max_attempts_csv_item -1}...")
+                    if driver:  # Try to quit the old driver if it exists
+                        try:
+                            driver.quit()
+                            logging.info("舊的瀏覽器驅動程式已關閉。")
+                        except Exception as e:
+                            logging.warning(f"關閉舊瀏覽器驅動程式時出錯: {e}")
+                    
+                    driver = setup_driver(proxy_manager) # Re-initialize driver
+                    if not driver:
+                        logging.error(f"重試CSV項目 '{main_search_query_from_csv}' 時瀏覽器驅動程式初始化失敗。將跳過此CSV項目。")
+                        print(f"❌ 重試CSV項目 '{main_search_query_from_csv}' 時瀏覽器驅動程式初始化失敗。將跳過此CSV項目。")
+                        # Record failure for this CSV item and break from retry loop for this item
+                        current_csv_row_results[f"{main_search_query_from_csv} (overall)"] = "驅動程式初始化失敗，無法重試"
+                        break # Break from while loop (attempts for this CSV item)
+                    logging.info(f"為CSV項目 '{main_search_query_from_csv}' 重試初始化瀏覽器成功。")
+                    print(f"✓ 為CSV項目 '{main_search_query_from_csv}' 重試初始化瀏覽器成功。")
+
+                # Call process_keyword_pair, which now returns driver_died status
+                results_for_this_attempt, all_targets_processed_status, driver_died = \
+                    process_keyword_pair(driver, main_search_query_from_csv, target_keywords_from_csv, 
+                                         args.max_pages, all_search_keywords_from_csv)
+                
+                current_csv_row_results.update(results_for_this_attempt) # Update with results from this attempt
+
+                if driver_died:
+                    attempt_csv_item += 1
+                    logging.warning(f"CSV項目 '{main_search_query_from_csv}' 處理過程中驅動程式故障。準備重試 (嘗試 {attempt_csv_item}/{max_attempts_csv_item-1}).")
+                    # Results from this failed attempt are already in current_csv_row_results.
+                    # If retrying, these might be overwritten or merged depending on keys.
+                    # For simplicity, if a retry happens, we might want to clear results from the failed attempt
+                    # or ensure keys are unique per attempt if we want to log all attempts.
+                    # Current logic: results are updated, so a successful retry will overwrite/add to them.
+                    # If all retries fail, the last attempt's (failed) results will remain.
+                else:
+                    csv_item_processed_successfully = True # Processed without driver dying
             
-            current_csv_row_results = {}
-            # The `all_search_keywords_from_csv` from `read_csv_keywords` is a list containing just the main search query for now.
-            # If `read_csv_keywords` is updated to return multiple search terms per CSV line, this loop will handle it.
-            # For now, it will effectively loop once with `main_search_query_from_csv`.
-            for search_keyword_to_use in all_search_keywords_from_csv: 
-                logging.info(f"針對CSV項目 '{main_search_query_from_csv}', 使用搜尋詞 '{search_keyword_to_use}' 進行Google搜尋, 目標: {target_keywords_from_csv}")
-                # The `search_keywords` parameter for `process_keyword_pair` should be the list of *all* search keywords for that CSV row.
-                # However, `process_keyword_pair` itself iterates through `search_keywords`. 
-                # To avoid nested iteration logic confusion, we'll pass only the current search_keyword_to_use and its targets.
-                # The `process_keyword_pair` will then iterate through its `target_keywords` for this `search_keyword_to_use`.
-                # The `search_keywords` argument to `process_keyword_pair` is a bit misleading in its current form if it's meant for the *inner* loop.
-                # Let's adjust `process_keyword_pair` or how we call it.
-                # For now, `process_keyword_pair` expects a single `search_query` and a list of `target_keywords`.
-                # The `search_keywords` param in `process_keyword_pair` is used for its internal loop over search terms.
-                # We will call `process_keyword_pair` for each `search_keyword_to_use` from the CSV row.
-                
-                # The `process_keyword_pair` function's internal loop `for i, current_search_keyword in enumerate(search_keywords):`
-                # should actually be based on `target_keywords` if `search_query` is the primary search term.
-                # Re-evaluating: `process_keyword_pair` takes ONE `search_query` and a list of `target_keywords`.
-                # The `search_keywords` parameter in `process_keyword_pair` seems to be for iterating different search terms *within* that call, which is confusing.
-                # Let's simplify: `process_keyword_pair` will handle one `search_query` and its `target_keywords`.
-                # The loop over `all_search_keywords_from_csv` will call `process_keyword_pair` multiple times if a CSV row has multiple search terms.
-
-                # Corrected call: Pass the single search_keyword_to_use and its associated target_keywords_from_csv.
-                # The `search_keywords` argument in `process_keyword_pair` is for the list of *all* search terms for context/logging, not for iteration inside it.
-                # The iteration over `search_keywords` within `process_keyword_pair` needs to be removed or rethought.
-                # For now, we assume `process_keyword_pair` is modified to take the driver and a *single* search_query, and its targets.
-                # The `search_keywords` list in `process_keyword_pair` was used to iterate and re-init driver. This is now done in main.
-                # So, `process_keyword_pair` should now take `driver`, `current_search_keyword_to_use`, `target_keywords_from_csv`.
-                # The internal loop `for i, current_search_keyword in enumerate(search_keywords):` in `process_keyword_pair` should be removed.
-                # The `search_query` parameter of `process_keyword_pair` will be `search_keyword_to_use`.
-                # The `search_keywords` parameter of `process_keyword_pair` can be `all_search_keywords_from_csv` for context if needed by `find_keyword_on_page` etc.
-
-                # The `process_keyword_pair` will now be called for each `search_keyword_to_use` from the CSV row.
-                # It will use the passed `driver` instance.
-                # The `search_keywords` parameter in `process_keyword_pair` is the list of all search terms from the CSV row for context.
-                # The primary iteration over search terms from the CSV row is happening here in `main`.
-                
-                # The `process_keyword_pair` function should be refactored to process ONE search_query against its target_keywords using the provided driver.
-                # The loop `for i, current_search_keyword in enumerate(search_keywords):` inside `process_keyword_pair` should be removed.
-                # The `search_query` argument to `process_keyword_pair` will be `search_keyword_to_use`.
-
-                # Simplified call assuming process_keyword_pair is refactored:
-                # results_for_this_search_term, success = process_keyword_pair(driver, search_keyword_to_use, target_keywords_from_csv, args.max_pages)
-                # For now, we stick to the existing structure of process_keyword_pair and pass all_search_keywords_from_csv as its search_keywords parameter.
-                # This means process_keyword_pair will internally loop through all_search_keywords_from_csv. This is redundant with the outer loop here.
-                # This needs to be fixed. Let's assume `process_keyword_pair` is refactored to take ONE search_query and its targets.
-                # And the loop over `all_search_keywords_from_csv` is the correct place to iterate if a CSV row can have multiple search queries.
-                # For now, `all_search_keywords_from_csv` from `read_csv_keywords` is `[search_query]`. So this outer loop runs once per CSV row.
-
-                # Let's assume `process_keyword_pair` is refactored to: 
-                # process_keyword_pair(driver, current_search_keyword_for_google, target_keywords_for_this_search, max_pages)
-                # And it returns results for *that specific* current_search_keyword_for_google.
-                
-                # The current `process_keyword_pair` iterates `search_keywords` internally. 
-                # We will call it once per CSV row, passing `main_search_query_from_csv` as the primary query for result aggregation, 
-                # and `all_search_keywords_from_csv` for its internal iteration if that's how it's designed.
-                # This is not ideal but matches the existing structure of `process_keyword_pair` more closely without major internal rewrite of it yet.
-
-                # The `search_query` parameter to `process_keyword_pair` is the *main* query for the CSV line (for result keying).
-                # The `search_keywords` parameter is the list of actual keywords to search on Google (from that CSV line).
-                results_for_csv_line, _ = process_keyword_pair(driver, main_search_query_from_csv, target_keywords_from_csv, args.max_pages, all_search_keywords_from_csv)
-                current_csv_row_results.update(results_for_csv_line)
+            if not csv_item_processed_successfully:
+                logging.error(f"未能成功處理CSV項目 '{main_search_query_from_csv}' 經過 {max_attempts_csv_item} 次嘗試。")
+                # Ensure a general failure message if not already specific from process_keyword_pair
+                if not any(key.startswith(main_search_query_from_csv) for key in current_csv_row_results):
+                     current_csv_row_results[f"{main_search_query_from_csv} (overall)"] = f"處理失敗，達到最大重試次數 {max_attempts_csv_item}"
             
             all_results_summary[main_search_query_from_csv] = current_csv_row_results
 
