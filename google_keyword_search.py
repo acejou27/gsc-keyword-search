@@ -288,41 +288,59 @@ def find_and_click_result(driver, target_keyword):
         
         # 點擊鏈接（在新標籤頁中打開）
         # 使用JavaScript點擊，避免可能的元素遮擋問題
-        driver.execute_script("arguments[0].click();", target_link)
-        
-        # 等待新標籤頁打開
-        WebDriverWait(driver, 1).until(EC.number_of_windows_to_be(2))
-        
-        # 切換到新打開的標籤頁
-        new_window = [window for window in driver.window_handles if window != current_window][0]
-        driver.switch_to.window(new_window)
-        
-        # 等待頁面加載
-        WebDriverWait(driver, 15).until(EC.presence_of_element_located((By.TAG_NAME, "body")))
-        
-        logging.info(f"已點擊並進入包含關鍵字 '{target_keyword}' 的頁面")
-        print(f"✓ 已點擊並進入包含關鍵字 '{target_keyword}' 的頁面")
-        
-        # 在頁面停留指定時間並模擬滾動
-        stay_time = 2  # 停留10秒
-        logging.info(f"在頁面停留 {stay_time} 秒並模擬滾動")
-        print(f"在頁面停留 {stay_time} 秒並模擬滾動...")
-        
-        start_scroll_time = time.time()
-        while time.time() - start_scroll_time < stay_time:
-            random_scroll(driver) # 使用現有的隨機滾動函數
-            time.sleep(random.uniform(0.5, 1.5)) # 每次滾動後短暫停頓
-            if time.time() - start_scroll_time >= stay_time:
-                break
-        
-        # 關閉當前標籤頁並返回搜尋結果頁
-        driver.close()
-        driver.switch_to.window(current_window)
-        
-        logging.info("已返回搜尋結果頁")
-        print("✓ 已返回搜尋結果頁")
-        
-        return True
+        try:
+            # 嘗試多種點擊方法，確保點擊成功
+            try:
+                # 方法1：使用JavaScript點擊
+                driver.execute_script("arguments[0].click();", target_link)
+            except Exception as click_error:
+                logging.warning(f"JavaScript點擊失敗，嘗試其他方法: {str(click_error)}")
+                try:
+                    # 方法2：使用ActionChains點擊
+                    ActionChains(driver).move_to_element(target_link).click().perform()
+                except Exception as action_error:
+                    logging.warning(f"ActionChains點擊失敗，嘗試直接點擊: {str(action_error)}")
+                    # 方法3：直接點擊
+                    target_link.click()
+            
+            # 等待新標籤頁打開
+            WebDriverWait(driver, 3).until(EC.number_of_windows_to_be(2))
+            
+            # 切換到新打開的標籤頁
+            new_window = [window for window in driver.window_handles if window != current_window][0]
+            driver.switch_to.window(new_window)
+            
+            # 等待頁面加載
+            WebDriverWait(driver, 15).until(EC.presence_of_element_located((By.TAG_NAME, "body")))
+            
+            logging.info(f"已點擊並進入包含關鍵字 '{target_keyword}' 的頁面")
+            print(f"✓ 已點擊並進入包含關鍵字 '{target_keyword}' 的頁面")
+            
+            # 在頁面停留指定時間並模擬滾動
+            stay_time = 5  # 增加停留時間到5秒
+            logging.info(f"在頁面停留 {stay_time} 秒並模擬滾動")
+            print(f"在頁面停留 {stay_time} 秒並模擬滾動...")
+            
+            start_scroll_time = time.time()
+            while time.time() - start_scroll_time < stay_time:
+                random_scroll(driver) # 使用現有的隨機滾動函數
+                time.sleep(random.uniform(0.5, 1.5)) # 每次滾動後短暫停頓
+                if time.time() - start_scroll_time >= stay_time:
+                    break
+            
+            # 關閉當前標籤頁並返回搜尋結果頁
+            driver.close()
+            driver.switch_to.window(current_window)
+            
+            logging.info("已返回搜尋結果頁")
+            print("✓ 已返回搜尋結果頁")
+            
+            return True
+            
+        except Exception as click_exception:
+            logging.error(f"點擊鏈接失敗: {str(click_exception)}")
+            print(f"❌ 點擊鏈接失敗: {str(click_exception)}")
+            return False
         
     except Exception as e:
         logging.error(f"點擊搜尋結果時出錯: {str(e)}")
@@ -340,15 +358,62 @@ def find_and_click_result(driver, target_keyword):
 
 
 def go_to_next_page(driver):
-    """點擊下一頁按鈕，添加更多人為行為"""
+    """點擊下一頁按鈕，添加更多人為行為，並識別最後一頁的情況"""
     # 檢查是否有驗證碼
     if check_for_captcha(driver):
         # 如果檢測到驗證碼，handle_captcha會關閉瀏覽器並返回False
         return handle_captcha(driver)
     
     try:
-        # 尋找下一頁按鈕
-        next_button = driver.find_element(By.ID, "pnnext")
+        # 檢查是否有「沒有找到結果」或「已經是最後一頁」的指示
+        try:
+            # 檢查是否有「沒有找到結果」的訊息
+            no_results = driver.find_elements(By.XPATH, "//div[contains(text(), '沒有找到') or contains(text(), '找不到') or contains(text(), 'No results found')]")
+            if no_results:
+                logging.info("搜尋結果頁面顯示沒有找到結果，視為已到達最後一頁")
+                print("搜尋結果頁面顯示沒有找到結果，視為已到達最後一頁")
+                return False
+        except Exception as e:
+            logging.warning(f"檢查'沒有找到結果'訊息時出錯: {str(e)}")
+            # 繼續執行，不中斷流程
+        
+        # 使用多種選擇器嘗試找到下一頁按鈕
+        next_button = None
+        selectors = [
+            (By.ID, "pnnext"),  # 主要的下一頁按鈕ID
+            (By.XPATH, "//a[@id='pnnext']"),  # 使用XPath查找下一頁按鈕
+            (By.XPATH, "//span[text()='下一頁']/parent::a"),  # 中文界面
+            (By.XPATH, "//span[text()='Next']/parent::a"),  # 英文界面
+            (By.XPATH, "//a[contains(@class, 'next') or contains(@class, 'pnnext')]"),  # 基於類名
+            (By.XPATH, "//a[contains(text(), '下一頁') or contains(text(), 'Next')]"),  # 基於文本
+            (By.CSS_SELECTOR, "#pnnext, .next, .pnnext")  # CSS選擇器組合
+        ]
+        
+        for selector_type, selector_value in selectors:
+            try:
+                buttons = driver.find_elements(selector_type, selector_value)
+                if buttons:
+                    next_button = buttons[0]
+                    logging.info(f"使用選擇器 {selector_type}:{selector_value} 找到下一頁按鈕")
+                    break
+            except Exception as e:
+                logging.debug(f"使用選擇器 {selector_type}:{selector_value} 查找下一頁按鈕時出錯: {str(e)}")
+                continue
+        
+        # 如果所有選擇器都無法找到下一頁按鈕，則視為已到達最後一頁
+        if not next_button:
+            logging.info("嘗試所有選擇器後仍找不到下一頁按鈕，已到達最後一頁")
+            print("找不到下一頁按鈕，已到達最後一頁")
+            return False
+        
+        # 檢查按鈕是否可見和可點擊
+        if not next_button.is_displayed() or not next_button.is_enabled():
+            logging.info("下一頁按鈕不可見或不可點擊，已到達最後一頁")
+            print("下一頁按鈕不可見或不可點擊，已到達最後一頁")
+            return False
+        
+        # 記錄當前URL，用於後續比較
+        current_url = driver.current_url
         
         # 隨機滾動到按鈕附近
         driver.execute_script(
@@ -359,38 +424,77 @@ def go_to_next_page(driver):
         # 隨機等待，模擬人類思考時間
         time.sleep(random.uniform(1.0, 2.5))
         
-        # 使用ActionChains模擬真實的鼠標移動和點擊
-        actions = ActionChains(driver)
-        actions.move_to_element(next_button)
-        actions.pause(random.uniform(0.3, 0.7))
-        actions.click()
+        # 嘗試多種方式點擊按鈕
+        click_success = False
+        click_methods = [
+            # 方法1：使用ActionChains
+            lambda: ActionChains(driver).move_to_element(next_button).pause(random.uniform(0.3, 0.7)).click().perform(),
+            # 方法2：使用JavaScript
+            lambda: driver.execute_script("arguments[0].click();", next_button),
+            # 方法3：直接點擊
+            lambda: next_button.click()
+        ]
         
-        logging.info("點擊下一頁...")
-        print("點擊下一頁...")
-        actions.perform()
+        for click_method in click_methods:
+            try:
+                logging.info("嘗試點擊下一頁...")
+                print("點擊下一頁...")
+                click_method()
+                
+                # 等待頁面變化
+                try:
+                    WebDriverWait(driver, 15).until(
+                        EC.staleness_of(next_button)
+                    )
+                    click_success = True
+                    break
+                except TimeoutException:
+                    # 如果頁面沒有變化，嘗試檢查URL是否變化
+                    new_url = driver.current_url
+                    if new_url != current_url:
+                        click_success = True
+                        break
+                    logging.warning("點擊後頁面沒有變化，嘗試其他點擊方法")
+            except Exception as e:
+                logging.warning(f"點擊方法失敗: {str(e)}，嘗試其他方法")
+                continue
         
-        # 等待新頁面加載，增加等待時間
-        WebDriverWait(driver, 15).until(
-            EC.staleness_of(next_button)
-        )
+        if not click_success:
+            logging.warning("所有點擊方法都失敗，可能已到達最後一頁")
+            print("無法點擊下一頁按鈕，可能已到達最後一頁")
+            return False
         
         # 頁面加載後的隨機等待
         time.sleep(random.uniform(1.5, 3.0))
         
-        return True
+        # 檢查點擊後的URL是否變化，確認是否真的前進到下一頁
+        new_url = driver.current_url
+        if new_url != current_url:
+            logging.info(f"成功前進到下一頁: {new_url}")
+            print(f"成功前進到下一頁: {new_url}")
+            return True
+        else:
+            logging.warning("點擊後URL沒有變化，可能未成功前進到下一頁")
+            print("點擊後URL沒有變化，可能未成功前進到下一頁")
+            return False
+            
     except NoSuchElementException:
         logging.info("沒有更多頁面或找不到下一頁按鈕")
-        print("沒有更多頁面或找不到下一頁按鈕")
+        print("沒有更多頁面或找不到下一頁按鈕，已到達最後一頁")
         return False
     except TimeoutException:
         logging.warning("等待頁面加載超時")
-        print("等待頁面加載超時，嘗試繼續...")
-        # 即使超時也嘗試繼續
-        time.sleep(5)
-        return True
+        print("等待頁面加載超時，視為已到達最後一頁")
+        # 超時可能意味著已經是最後一頁或出現其他問題，返回False以避免卡住
+        return False
     except ElementNotInteractableException:
         logging.warning("無法點擊下一頁按鈕")
-        print("無法點擊下一頁按鈕，可能被其他元素遮擋")
+        print("無法點擊下一頁按鈕，可能被其他元素遮擋或已到達最後一頁")
+        return False
+    except Exception as e:
+        logging.error(f"前往下一頁時出現未預期的錯誤: {str(e)}")
+        print(f"前往下一頁時出現未預期的錯誤: {str(e)}，視為已到達最後一頁")
+        # 任何未預期的錯誤都視為已到達最後一頁，避免卡住
         return False
 
 
@@ -399,7 +503,7 @@ def main():
     search_query = "123"
     # target_keyword = "人力銀行"
     target_keywords = []
-    max_pages = 5  # 默認最多搜尋5頁
+    max_pages = 10  # 默認最多搜尋10頁
 
     if len(sys.argv) < 3:
         print("使用方法: python google_keyword_search.py [搜尋詞] [目標關鍵字1] [目標關鍵字2] ... [最大頁數(可選)]")

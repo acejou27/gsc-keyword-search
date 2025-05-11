@@ -5,7 +5,7 @@
 網頁關鍵字搜尋工具 - CSV版本
 
 這個腳本是google_keyword_search.py的擴展版本，允許通過CSV檔案輸入多個搜尋關鍵字和目標關鍵字。
-每一行CSV格式為：搜尋關鍵字,目標關鍵字
+每一行CSV格式為：關鍵字1,關鍵字2,關鍵字3,目標關鍵字
 
 使用方法:
     python google_keyword_search_csv.py [CSV檔案路徑] [最大頁數(可選)]
@@ -14,8 +14,13 @@
     python google_keyword_search_csv.py keywords.csv 5
 
 CSV檔案格式範例:
-    Python 教學,Django
-    AI 工具,ChatGPT
+    Python 教學,Flask,Django
+    AI 工具,機器學習,ChatGPT
+
+格式說明:
+    - 第一個關鍵字作為主要搜尋詞
+    - 中間的關鍵字作為額外的搜尋詞
+    - 最後一個關鍵字作為目標關鍵字
 """
 
 import sys
@@ -62,10 +67,15 @@ logging.basicConfig(
 def read_csv_keywords(csv_file_path):
     """
     從CSV檔案讀取搜尋關鍵字和目標關鍵字
-    CSV格式：搜尋關鍵字,目標關鍵字
+    CSV格式：關鍵字1,關鍵字2,關鍵字3,目標關鍵字
     
     返回：包含(搜尋關鍵字, [目標關鍵字], [所有搜尋關鍵字])元組的列表
     支持每行包含不同的搜尋關鍵字和目標關鍵字組合
+    
+    根據README說明：
+    - 第一個關鍵字作為主要搜尋詞
+    - 中間的關鍵字作為額外的搜尋詞
+    - 最後一個關鍵字作為目標關鍵字
     """
     keyword_pairs = []
     
@@ -87,23 +97,27 @@ def read_csv_keywords(csv_file_path):
                         logging.info(f"讀取到搜尋關鍵字: {search_query}，無目標關鍵字")
                     continue
                 
-                # 處理標準格式：搜尋關鍵字,目標關鍵字
+                # 處理標準格式：關鍵字1,關鍵字2,關鍵字3,目標關鍵字
                 search_query = row[0].strip()
-                target_keywords = []
                 
-                # 收集所有目標關鍵字（從第二個元素開始）
-                for i in range(1, len(row)):
+                # 最後一個關鍵字作為目標關鍵字
+                target_keyword = row[-1].strip()
+                target_keywords = [target_keyword] if target_keyword else []
+                
+                # 收集所有搜尋關鍵字（第一個到倒數第二個）
+                search_keywords = []
+                for i in range(0, len(row) - 1):  # 不包括最後一個元素
                     keyword = row[i].strip()
                     if keyword:
-                        target_keywords.append(keyword)
+                        search_keywords.append(keyword)
                 
                 if not search_query:
                     logging.warning(f"沒有有效的搜尋關鍵字，跳過此行: {row}")
                     continue
                 
                 # 將搜尋關鍵字和目標關鍵字添加到列表中
-                keyword_pairs.append((search_query, target_keywords, [search_query]))
-                logging.info(f"讀取到搜尋關鍵字: {search_query}，目標關鍵字: {target_keywords}")
+                keyword_pairs.append((search_query, target_keywords, search_keywords))
+                logging.info(f"讀取到搜尋關鍵字: {search_query}，所有搜尋關鍵字: {search_keywords}，目標關鍵字: {target_keywords}")
                 
         if not keyword_pairs:
             logging.error("CSV檔案中沒有有效的關鍵字對")
@@ -286,10 +300,10 @@ def main():
     parser = argparse.ArgumentParser(
         description="網頁關鍵字搜尋工具 - CSV版本",
         formatter_class=argparse.RawTextHelpFormatter,
-        epilog="CSV檔案格式範例 (每行一個搜尋任務，第一個是主要搜尋詞，後面是目標關鍵字):\n  Python 教學,Django,Flask\n  AI 工具,ChatGPT"
+        epilog="CSV檔案格式範例 (每行一個搜尋任務):\n  Python 教學,Flask,Django\n  AI 工具,機器學習,ChatGPT\n\n格式說明:\n  - 第一個關鍵字作為主要搜尋詞\n  - 中間的關鍵字作為額外的搜尋詞\n  - 最後一個關鍵字作為目標關鍵字"
     )
     parser.add_argument("csv_file", help="包含搜尋關鍵字和目標關鍵字的CSV檔案路徑")
-    parser.add_argument("max_pages", type=int, nargs='?', default=5, help="最大搜尋頁數 (預設: 5)")
+    parser.add_argument("max_pages", type=int, nargs='?', default=10, help="最大搜尋頁數 (預設: 10)")
     parser.add_argument("--proxy-file", help="代理伺服器列表檔案路徑 (每行一個代理，格式 ip:port 或 ip:port:user:pass)")
 
     args = parser.parse_args()

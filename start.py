@@ -46,7 +46,7 @@ def run_single_search():
     print_colored("\n=== 單個關鍵詞搜索 ===", Colors.BLUE)
     search_query = input("請輸入搜索詞: ")
     target_keywords = input("請輸入目標關鍵詞(多個關鍵詞用空格分隔): ").split()
-    max_pages = input("請輸入最大搜索頁數(默認5): ") or "5"
+    max_pages = input("請輸入最大搜索頁數(默認10): ") or "10"
     
     use_proxy = input("是否使用代理？(y/n, 默認n): ").lower() == 'y'
     proxy_args = []
@@ -62,7 +62,7 @@ def run_csv_search():
     """運行CSV批量搜索"""
     print_colored("\n=== CSV批量搜索 ===", Colors.BLUE)
     csv_file = input("請輸入CSV文件路徑(默認keywords.csv): ") or "keywords.csv"
-    max_pages = input("請輸入最大搜索頁數(默認5): ") or "5"
+    max_pages = input("請輸入最大搜索頁數(默認10): ") or "10"
     
     use_proxy = input("是否使用代理？(y/n, 默認n): ").lower() == 'y'
     proxy_args = []
