@@ -316,15 +316,114 @@ def find_and_click_result(driver, target_keyword):
             logging.info(f"已點擊並進入包含關鍵字 '{target_keyword}' 的頁面")
             print(f"✓ 已點擊並進入包含關鍵字 '{target_keyword}' 的頁面")
             
-            # 在頁面停留指定時間並模擬滾動
-            stay_time = 5  # 增加停留時間到5秒
-            logging.info(f"在頁面停留 {stay_time} 秒並模擬滾動")
-            print(f"在頁面停留 {stay_time} 秒並模擬滾動...")
+            # 在新頁面執行向下滾動，然後停留5秒
+            logging.info("在新頁面執行向下滾動至底部，然後停留 5 秒")
+            print("在新頁面執行向下滾動至底部，然後停留 5 秒...")
             
-            start_scroll_time = time.time()
-            while time.time() - start_scroll_time < stay_time:
-                random_scroll(driver) # 使用現有的隨機滾動函數
-                time.sleep(random.uniform(0.5, 1.5)) # 每次滾動後短暫停頓
+            # v21: Initial full scroll, then iterative partial viewport scrolls with pauses and checks
+            logging.info("Attempting to scroll (v21 - INITIAL FULL SCROLL, THEN ITERATIVE PARTIAL VIEWPORT SCROLLS)...")
+            print("Attempting to scroll (v21 - INITIAL FULL SCROLL, THEN ITERATIVE PARTIAL VIEWPORT SCROLLS)...")
+
+            bottom_tolerance_px = 15
+            scroll_completed_successfully = False
+
+            # --- Part 1: Initial Full Scroll --- 
+            initial_pause_s = 4.0
+            logging.info(f"Part 1: Initial full scroll to document.body.scrollHeight, then pausing for {initial_pause_s}s.")
+            print(f"Part 1: Initial full scroll, then pausing for {initial_pause_s}s.")
+            driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+            time.sleep(initial_pause_s)
+
+            # Check if already at bottom after initial scroll
+            current_y = driver.execute_script("return window.pageYOffset || document.documentElement.scrollTop;")
+            page_h = driver.execute_script("return document.body.scrollHeight;")
+            viewport_h = driver.execute_script("return window.innerHeight;")
+            if (current_y + viewport_h >= page_h - bottom_tolerance_px):
+                logging.info("Part 1: Already at bottom after initial full scroll. Scroll complete.")
+                print("✓ Part 1: Already at bottom after initial full scroll. Scroll complete.")
+                scroll_completed_successfully = True
+            else:
+                logging.info(f"Part 1: Not yet at bottom. Y={current_y}, PageH={page_h}, ViewportH={viewport_h}. Proceeding to iterative scrolls.")
+                print(f"Part 1: Not yet at bottom. Proceeding to iterative scrolls.")
+
+            # --- Part 2: Iterative Partial Viewport Scrolls --- 
+            if not scroll_completed_successfully:
+                max_iterative_attempts = 10
+                iterative_pause_s = 3.0
+                last_iterative_y = -1
+                consecutive_y_unchanged = 0
+                logging.info(f"Part 2: Starting iterative scrolls (max {max_iterative_attempts} attempts, pause {iterative_pause_s}s each).")
+                print(f"Part 2: Starting iterative scrolls...")
+
+                for attempt in range(max_iterative_attempts):
+                    current_y = driver.execute_script("return window.pageYOffset || document.documentElement.scrollTop;")
+                    page_h = driver.execute_script("return document.body.scrollHeight;")
+                    viewport_h = driver.execute_script("return window.innerHeight;")
+                    scroll_step_px = int(viewport_h / 3) # Scroll by a third of the viewport
+                    if scroll_step_px < 100: scroll_step_px = 100 # Minimum scroll step
+
+                    logging.info(f"  Iterative Attempt {attempt + 1}/{max_iterative_attempts}: Y={current_y}, PageH={page_h}, ViewportH={viewport_h}. Scrolling by {scroll_step_px}px.")
+                    print(f"  Iterative Attempt {attempt + 1}/{max_iterative_attempts}: Y={current_y}, PageH={page_h}. Scrolling by {scroll_step_px}px...")
+
+                    if (current_y + viewport_h >= page_h - bottom_tolerance_px):
+                        logging.info("  Iterative: Visually at or very near bottom. Scroll complete.")
+                        print("  ✓ Iterative: Visually at or very near bottom. Scroll complete.")
+                        scroll_completed_successfully = True
+                        break
+
+                    driver.execute_script(f"window.scrollBy(0, {scroll_step_px});")
+                    logging.info(f"  Iterative Attempt {attempt + 1}: Pausing for {iterative_pause_s}s...")
+                    print(f"  Iterative Attempt {attempt + 1}: Pausing for {iterative_pause_s}s...")
+                    time.sleep(iterative_pause_s)
+
+                    y_after_iterative_scroll = driver.execute_script("return window.pageYOffset || document.documentElement.scrollTop;")
+                    if y_after_iterative_scroll == current_y: # If scrollBy didn't change Y (and not at bottom)
+                        consecutive_y_unchanged += 1
+                        logging.info(f"  Iterative: Y position unchanged ({y_after_iterative_scroll}) for {consecutive_y_unchanged} attempt(s).")
+                        print(f"  Iterative: Y position unchanged for {consecutive_y_unchanged} attempt(s).")
+                        if consecutive_y_unchanged >= 1: # If stuck for one attempt
+                            logging.warning("  Iterative: Y position stable. Attempting one final full scroll.")
+                            print("  ⚠️ Iterative: Y position stable. Attempting one final full scroll...")
+                            driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+                            time.sleep(3.0)
+                            scroll_completed_successfully = True # Assume this works
+                            break
+                    else:
+                        consecutive_y_unchanged = 0
+                    last_iterative_y = y_after_iterative_scroll
+                
+                if not scroll_completed_successfully and attempt == max_iterative_attempts -1:
+                    logging.info(f"Part 2: Max iterative attempts ({max_iterative_attempts}) reached.")
+                    print(f"Part 2: Max iterative attempts reached.")
+
+            # --- Part 3: Final Failsafe Scroll --- 
+            if not scroll_completed_successfully:
+                final_failsafe_pause_s = 3.0
+                logging.warning(f"Part 3: Scroll not confirmed complete. Performing final failsafe scroll to document.body.scrollHeight and pausing for {final_failsafe_pause_s}s.")
+                print(f"⚠️ Part 3: Final failsafe scroll to bottom and pausing for {final_failsafe_pause_s}s...")
+                driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+                time.sleep(final_failsafe_pause_s)
+
+            final_scroll_y_pos = driver.execute_script("return window.pageYOffset || document.documentElement.scrollTop;")
+            final_page_h = driver.execute_script("return document.body.scrollHeight;") # Added semicolon for consistency
+            final_viewport_h = driver.execute_script("return window.innerHeight;") # Get viewport height
+
+            logging.info(f"Finished scrolling process (v21). Final Y: {final_scroll_y_pos}, PageH: {final_page_h}, ViewportH: {final_viewport_h}")
+            print(f"✓ Finished scrolling process (v21). Final Y: {final_scroll_y_pos}, PageH: {final_page_h}, ViewportH: {final_viewport_h}")
+
+            # Explicitly confirm if scrolled to bottom before the 5-second pause
+            if (final_scroll_y_pos + final_viewport_h >= final_page_h - bottom_tolerance_px):
+                logging.info(f"CONFIRMED: Page scrolled to bottom (Y+VH: {final_scroll_y_pos + final_viewport_h} >= PageH-Tol: {final_page_h - bottom_tolerance_px}).")
+                print(f"✓ CONFIRMED: Page scrolled to bottom.")
+            else:
+                # This case should ideally not be hit if scrolling logic is robust, but good for diagnostics
+                logging.warning(f"WARNING: Page may not be fully at bottom despite all efforts (Y+VH: {final_scroll_y_pos + final_viewport_h} < PageH-Tol: {final_page_h - bottom_tolerance_px}).")
+                print(f"⚠️ WARNING: Page may not be fully at bottom despite all efforts.")
+            
+            # 明確停留5秒 AFTER all scrolling attempts and confirmation
+            logging.info("Now pausing for 5 seconds after scrolling and confirmation.")
+            print("Now pausing for 5 seconds after scrolling and confirmation...")
+            time.sleep(5)
             
             # 關閉當前標籤頁並返回搜尋結果頁
             driver.close()
