@@ -325,8 +325,6 @@ def find_and_click_result(driver, target_keyword):
             while time.time() - start_scroll_time < stay_time:
                 random_scroll(driver) # 使用現有的隨機滾動函數
                 time.sleep(random.uniform(0.5, 1.5)) # 每次滾動後短暫停頓
-                if time.time() - start_scroll_time >= stay_time:
-                    break
             
             # 關閉當前標籤頁並返回搜尋結果頁
             driver.close()
