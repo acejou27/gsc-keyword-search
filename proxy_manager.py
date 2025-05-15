@@ -73,7 +73,7 @@ class ProxyManager:
         self.last_refresh_time = current_time
         new_proxies = []
         
-        # 從文件讀取代理
+        # 優先從文件讀取代理
         if self.proxy_file_path and os.path.exists(self.proxy_file_path):
             try:
                 with open(self.proxy_file_path, 'r', encoding='utf-8') as f:
@@ -85,14 +85,18 @@ class ProxyManager:
                                 "failed_attempts": 0,
                                 "last_used": 0
                             })
-                logging.info(f"從文件 {self.proxy_file_path} 讀取了 {len(new_proxies)} 個代理")
-                print(f"✓ 從文件 {self.proxy_file_path} 讀取了 {len(new_proxies)} 個代理")
+                if new_proxies: # 只有成功從文件讀取到代理才打印日誌
+                    logging.info(f"從文件 {self.proxy_file_path} 讀取了 {len(new_proxies)} 個代理")
+                    print(f"✓ 從文件 {self.proxy_file_path} 讀取了 {len(new_proxies)} 個代理")
+                else:
+                    logging.warning(f"從文件 {self.proxy_file_path} 未讀取到有效代理，嘗試從API獲取。")
+                    print(f"⚠️ 從文件 {self.proxy_file_path} 未讀取到有效代理，嘗試從API獲取。")
             except Exception as e:
-                logging.error(f"讀取代理文件時出錯: {str(e)}")
-                print(f"❌ 讀取代理文件時出錯: {str(e)}")
+                logging.error(f"讀取代理文件 {self.proxy_file_path} 時出錯: {str(e)}，嘗試從API獲取。")
+                print(f"❌ 讀取代理文件 {self.proxy_file_path} 時出錯: {str(e)}，嘗試從API獲取。")
         
-        # 從API獲取代理
-        elif self.gsa_api_url:
+        # 如果文件讀取失敗或未配置，且配置了API URL，則從API獲取代理
+        if not new_proxies and self.gsa_api_url:
             try:
                 response = requests.get(self.gsa_api_url, timeout=10)
                 if response.status_code == 200:
@@ -168,6 +172,79 @@ class ProxyManager:
         
         logging.info(f"選擇代理: {selected_proxy['proxy']}")
         return selected_proxy["proxy"]
+
+    def remove_proxy(self, proxy_str):
+        """從代理列表中移除指定的代理
+        
+        參數:
+            proxy_str (str): 要移除的代理字符串（格式：ip:port）
+        """
+        if not proxy_str:
+            return
+            
+        # 從列表中移除指定的代理
+        self.proxies = [p for p in self.proxies if p["proxy"] != proxy_str]
+        logging.info(f"已移除失敗的代理: {proxy_str}")
+        print(f"✗ 已移除失敗的代理: {proxy_str}")
+        
+        # 如果代理列表為空，嘗試刷新
+        if not self.proxies:
+            logging.warning("代理列表為空，嘗試刷新代理列表")
+            print("⚠️ 代理列表為空，嘗試刷新代理列表")
+            self.refresh_proxies()
+    
+    def get_current_proxy_string(self):
+        """獲取當前正在使用的代理的字符串表示，如果有的話。"""
+        # 這是一個簡化的示例，假設 get_proxy 或 get_next_proxy
+        # 會設置一個類似 self.current_proxy 的屬性。
+        # 或者，如果我們總是從 self.proxies 中選擇，我們需要一種方式來識別"當前"的那個。
+        # 為了簡單起見，如果沒有明確的"當前"代理，我們可以返回最後一個被標記為"last_used"最新的那個。
+        if not self.proxies:
+            return "無 (列表為空)"
+        
+        # 查找最近使用的代理
+        # 這假設 last_used 時間戳是可靠的
+        try:
+            # 過濾掉失敗次數過多的代理，除非所有代理都失敗了
+            active_proxies = [p for p in self.proxies if p["failed_attempts"] < self.max_failed_attempts]
+            if not active_proxies:
+                active_proxies = self.proxies # 如果都失敗了，就從所有代理中找
+            
+            if not active_proxies: # 如果連 self.proxies 都為空
+                 return "無 (無有效代理)"
+
+            latest_used_proxy = max(active_proxies, key=lambda p: p.get('last_used', 0), default=None)
+            if latest_used_proxy and latest_used_proxy['last_used'] > 0:
+                return latest_used_proxy['proxy']
+            else:
+                # 如果沒有代理被使用過，或者 last_used 都是0
+                return "無 (尚未使用或無有效代理)"
+        except Exception as e:
+            logging.error(f"獲取當前代理字符串時出錯: {e}")
+            return "錯誤"
+
+    def get_stats(self):
+        """獲取代理使用情況的統計數據"""
+        total_proxies_available = len(self.proxies)
+        total_failed_attempts = sum(p.get('failed_attempts', 0) for p in self.proxies)
+        proxies_maxed_out_failures = sum(1 for p in self.proxies if p.get('failed_attempts', 0) >= self.max_failed_attempts)
+        
+        # 嘗試獲取 "successful_rotations" - 這需要一個計數器
+        # 為了簡化，我們暫時不直接追蹤輪換次數，因為 get_next_proxy 只是選擇一個代理
+        # 可以考慮在 get_next_proxy 中增加一個計數器 self.rotations_count
+        # 此處的 "proxies_tried_count" 也可以通過類似方式實現，或者基於日誌分析
+        
+        stats = {
+            "total_proxies_available": total_proxies_available,
+            "total_failed_attempts_sum": total_failed_attempts, # 所有代理失敗次數的總和
+            "proxies_maxed_out_count": proxies_maxed_out_failures, # 達到最大失敗次數的代理數量
+            # 以下為之前日誌中期望的鍵名，我們盡量匹配
+            "proxies_tried_count": "N/A (未追蹤)", # 需要額外邏輯追蹤
+            "successful_rotations": "N/A (未追蹤)", # 需要額外邏輯追蹤
+            "failed_attempts_count": total_failed_attempts # 使用總和作為一個指標
+        }
+        logging.info(f"生成代理統計: {stats}")
+        return stats
         
     def get_next_proxy(self):
         """獲取下一個代理，確保每次搜索都使用新的代理"""

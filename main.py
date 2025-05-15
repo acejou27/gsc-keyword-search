@@ -273,13 +273,33 @@ def main():
         print(f"\n❌ 執行過程中發生錯誤: {str(e)}")
     
     finally:
+        # 顯示代理統計信息 (如果啟用)
+        if PROXY_SUPPORT and proxy_manager:
+            try:
+                if hasattr(proxy_manager, 'get_stats'):
+                    stats = proxy_manager.get_stats() # 假設 proxy_manager 有 get_stats 方法
+                    print("\n--- 代理使用情況總結 ---")
+                    if stats:
+                        print(f"  總共嘗試代理數量: {stats.get('proxies_tried_count', 'N/A')}")
+                        print(f"  代理輪換次數: {stats.get('successful_rotations', 'N/A')}")
+                        print(f"  代理失敗次數: {stats.get('failed_attempts_count', 'N/A')}")
+                        # 可以根據實際 get_stats() 返回的內容調整
+                    else:
+                        print("  未能獲取代理統計信息。")
+                    print("--------------------------")
+                else:
+                    logging.info("ProxyManager.get_stats() 方法未實現，跳過代理統計。")
+            except Exception as e_stats_display:
+                logging.warning(f"顯示代理統計時發生錯誤: {str(e_stats_display)}")
+                print(f"⚠️ 顯示代理統計時發生錯誤: {str(e_stats_display)}")
+
         # 關閉WebDriver
         try:
             if driver:
                 driver.quit()
                 logging.info("已關閉WebDriver")
                 print("\n✓ 已關閉WebDriver")
-        except:
+        except: # 保持原始的 bare except 行為
             pass
 
 if __name__ == "__main__":

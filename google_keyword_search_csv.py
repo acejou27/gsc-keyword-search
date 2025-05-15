@@ -297,6 +297,7 @@ def process_keyword_pair(driver, search_query, target_keywords, max_pages=10, se
 
 
 def main():
+    print("DEBUG: Entered main function") # DEBUG
     parser = argparse.ArgumentParser(
         description="網頁關鍵字搜尋工具 - CSV版本",
         formatter_class=argparse.RawTextHelpFormatter,
@@ -314,9 +315,11 @@ def main():
         sys.exit(1)
 
     keyword_pairs = read_csv_keywords(args.csv_file)
+    print(f"DEBUG: After read_csv_keywords, keyword_pairs: {keyword_pairs}") # DEBUG
     if not keyword_pairs:
         logging.error("CSV檔案中沒有有效的關鍵字對，或讀取失敗")
         print("❌ CSV檔案中沒有有效的關鍵字對，或讀取失敗。請檢查檔案路徑和內容格式。")
+        print("DEBUG: Exiting because keyword_pairs is empty or failed to load.") # DEBUG
         sys.exit(1)
 
     proxy_manager = None
@@ -329,29 +332,102 @@ def main():
             logging.warning(f"初始化代理管理器失敗: {e}，將不使用代理")
             print(f"⚠️ 初始化代理管理器失敗: {e}，將不使用代理")
 
-    driver = None
+    driver = None # 初始化 driver 為 None
     all_results_summary = {}
+    print(f"DEBUG: Initialized all_results_summary. Length: {len(all_results_summary)}") # DEBUG
+
+    print(f"DEBUG: keyword_pairs before try block: {keyword_pairs}") # DEBUG
 
     try:
-        logging.info("初始化瀏覽器驅動程式...")
-        driver = setup_driver(proxy_manager) # Proxy_manager can be None
-        if not driver:
-            logging.error("瀏覽器驅動程式初始化失敗，無法繼續。")
-            print("❌ 瀏覽器驅動程式初始化失敗，無法繼續。")
-            sys.exit(1)
-        logging.info("瀏覽器驅動程式初始化成功。")
-        print("✓ 瀏覽器驅動程式初始化成功。")
+        # The keyword_pairs are already loaded and checked before this try block.
+        # The redundant driver initializations were already commented out.
+
+        # logging.info("開始初始化主瀏覽器驅動程式...")
+        # print("⏳ 開始初始化主瀏覽器驅動程式...")
+        # driver = setup_driver(proxy_manager) # Initial setup
+        # if not driver:
+        #     logging.error("主瀏覽器驅動程式初始化失敗。腳本將無法繼續處理關鍵字。")
+        #     print("❌ 主瀏覽器驅動程式初始化失敗。腳本將無法繼續處理關鍵字。")
+        #     return # 這裡的 return 會執行 finally
 
         print(f"\n{'='*50}")
         print(f"開始處理 {len(keyword_pairs)} 組CSV項目")
         print(f"最大搜尋頁數: {args.max_pages}")
-        if proxy_manager and proxy_manager.get_proxies():
-            print(f"使用代理數量: {len(proxy_manager.get_proxies())}")
+        if proxy_manager and proxy_manager.proxies:
+            print(f"✓ 使用代理，代理數量: {len(proxy_manager.proxies)}")
+        elif proxy_manager:
+            print("✓ 已配置代理文件，但代理列表為空或加載失敗，將不使用代理")
         else:
-            print("不使用代理")
+            print("ⓘ 未配置代理文件，不使用代理")
         print(f"{'='*50}\n")
 
+        print(f"DEBUG: Entering keyword processing loop. Number of keyword pairs: {len(keyword_pairs)}") # DEBUG
+        if not keyword_pairs:
+            print("DEBUG: keyword_pairs is EMPTY right before the loop!") # DEBUG
+
         for i, (main_search_query_from_csv, target_keywords_from_csv, all_search_keywords_from_csv) in enumerate(keyword_pairs):
+            logging.info(f"準備處理CSV項目 {i+1}/{len(keyword_pairs)}: 主要搜尋詞='{main_search_query_from_csv}'")
+            print(f"DEBUG: Inside loop, processing item {i+1}: {main_search_query_from_csv}") # DEBUG
+            print(f"\n{'='*80}")
+            print(f"準備處理CSV項目 {i+1}/{len(keyword_pairs)}: {main_search_query_from_csv}")
+
+            # 為每個CSV主要搜尋詞輪換代理並重置驅動程式
+            if proxy_manager:
+                logging.info(f"為 '{main_search_query_from_csv}' 嘗試輪換代理並重置驅動程式...")
+                print(f"🔄 為 '{main_search_query_from_csv}' 嘗試輪換代理...")
+                rotated_proxy = proxy_manager.get_next_proxy() # Corrected: Changed from rotate_proxy()
+                if rotated_proxy:
+                    logging.info(f"代理已輪換至: {rotated_proxy}")
+                    print(f"✓ 代理已輪換至: {proxy_manager.get_current_proxy_string()}")
+                elif proxy_manager.get_current_proxy_string(): # No new proxy rotated, but one might still be active from previous or initial load
+                    logging.info(f"未能輪換到新代理，但仍有當前代理: {proxy_manager.get_current_proxy_string()}")
+                    print(f"⚠️ 未能輪換到新代理，但仍使用當前代理: {proxy_manager.get_current_proxy_string()}")
+                else:
+                    logging.warning("代理輪換失敗且無可用代理。將嘗試不使用代理進行操作。")
+                    print("⚠️ 代理輪換失敗且無可用代理。將嘗試不使用代理進行操作或跳過此項目。")
+                    # 在這種情況下，我們應該明確地不使用代理，或者如果強制使用代理，則跳過
+                    # For now, let setup_driver handle proxy_manager which might have no active proxy.
+                    # The key is that setup_driver should gracefully handle a proxy_manager with no usable proxies.
+
+                if driver: # 關閉舊的驅動程式實例
+                    logging.info("關閉現有驅動程式以準備下一次搜尋...")
+                    try:
+                        driver.quit()
+                    except Exception as e_quit:
+                        logging.error(f"關閉舊驅動程式時出錯: {e_quit}")
+                    driver = None # 確保舊驅動程式被清除
+                
+                logging.info("嘗試重新初始化驅動程式...")
+                print("⏳ 嘗試重新初始化驅動程式...")
+                # 如果代理輪換失敗且無可用代理，proxy_manager.get_current_proxy_string() 會是 None
+                # setup_driver 應該能處理 proxy_manager 實例本身，並在內部檢查是否有可用代理
+                driver = setup_driver(proxy_manager) 
+                if not driver:
+                    logging.error(f"為CSV項目 '{main_search_query_from_csv}' 重新初始化驅動程式失敗。跳過此項目。")
+                    print(f"❌ 為CSV項目 '{main_search_query_from_csv}' 重新初始化驅動程式失敗。跳過此項目。")
+                    all_results_summary[main_search_query_from_csv] = {"error": "驅動程式重新初始化失敗"}
+                    # 確保在 continue 前記錄此CSV項目的失敗
+                    if main_search_query_from_csv not in all_results_summary:
+                         all_results_summary[main_search_query_from_csv] = {}
+                    all_results_summary[main_search_query_from_csv][f"{main_search_query_from_csv} (overall)"] = "驅動程式初始化失敗，跳過"
+                    continue # 跳到下一個CSV項目
+                
+                current_proxy_for_log = proxy_manager.get_current_proxy_string() if proxy_manager and proxy_manager.get_current_proxy_string() else "無代理"
+                logging.info(f"驅動程式已重新初始化。本次使用代理: {current_proxy_for_log}")
+                print(f"✓ 驅動程式已重新初始化。本次使用代理: {current_proxy_for_log}")
+            elif not driver: # No proxy_manager, but driver might have died from previous CSV item
+                logging.info("無代理管理器，但驅動程式不存在，嘗試重新初始化（無代理）。")
+                print("⏳ 無代理管理器，但驅動程式不存在，嘗試重新初始化（無代理）。")
+                driver = setup_driver(None)
+                if not driver:
+                    logging.error(f"為CSV項目 '{main_search_query_from_csv}' 重新初始化驅動程式失敗（無代理）。跳過此項目。")
+                    print(f"❌ 為CSV項目 '{main_search_query_from_csv}' 重新初始化驅動程式失敗（無代理）。跳過此項目。")
+                    all_results_summary[main_search_query_from_csv] = {"error": "驅動程式重新初始化失敗（無代理）"}
+                    continue # 跳到下一個CSV項目
+                logging.info("驅動程式已重新初始化（無代理）。")
+                print("✓ 驅動程式已重新初始化（無代理）。")
+
+
             print(f"\n{'#'*50}")
             logging.info(f"處理CSV項目 {i+1}/{len(keyword_pairs)}: 主要搜尋詞='{main_search_query_from_csv}', 目標={target_keywords_from_csv}, 所有搜尋詞={all_search_keywords_from_csv}")
             print(f"處理CSV項目 {i+1}/{len(keyword_pairs)}")
@@ -413,11 +489,30 @@ def main():
             
             all_results_summary[main_search_query_from_csv] = current_csv_row_results
 
+            # Always try to process the next CSV item, even if the current one had issues (unless it's a KeyboardInterrupt)
             if i < len(keyword_pairs) - 1:
                 wait_time = random.uniform(5.0, 10.0) # Increased wait time between CSV entries
                 logging.info(f"完成CSV項目 '{main_search_query_from_csv}' 的處理，等待 {wait_time:.1f} 秒後處理下一個CSV項目...")
                 print(f"\n完成CSV項目 '{main_search_query_from_csv}' 的處理，等待 {wait_time:.1f} 秒後處理下一個CSV項目...")
                 time.sleep(wait_time)
+                # If driver died, it should be re-initialized at the start of the next CSV item's attempt loop
+                # or if the next item starts, its own setup_driver call (if it were per item) would handle it.
+                # Current logic: driver is re-initialized if an *attempt* for a CSV item fails and retries.
+                # If a CSV item exhausts retries, the driver might be dead. We need to ensure it's fresh for the *next* CSV item.
+                if driver_died: # If the driver died processing the *current* CSV item
+                    logging.warning(f"驅動程式在處理 '{main_search_query_from_csv}' 後失效，嘗試為下一個CSV項目重新初始化。")
+                    print(f"⚠️ 驅動程式在處理 '{main_search_query_from_csv}' 後失效，嘗試為下一個CSV項目重新初始化。")
+                    if driver:
+                        try:
+                            driver.quit()
+                        except Exception as e_quit:
+                            logging.error(f"關閉失效的驅動程式時出錯: {e_quit}")
+                    driver = setup_driver(proxy_manager)
+                    if not driver:
+                        logging.error("為下一個CSV項目重新初始化驅動程式失敗。可能影響後續處理。")
+                        print("❌ 為下一個CSV項目重新初始化驅動程式失敗。後續項目可能無法處理。")
+                        # Decide if we should stop all processing or try to continue
+                        # For now, let the loop continue, and the next item will fail its setup if driver is None.
 
         print(f"\n{'='*50}")
         print("🎉 所有CSV項目處理完成")
@@ -430,15 +525,48 @@ def main():
         logging.error(f"主處理過程中發生未預期錯誤: {e}", exc_info=True)
         print(f"❌ 主處理過程中發生未預期錯誤: {e}")
     finally:
-        if driver:
-            logging.info("關閉瀏覽器驅動程式...")
+        logging.info("進入 finally 區塊，準備關閉資源並顯示統計信息。")
+        print("\n⏳ 進入 finally 區塊，準備關閉資源並顯示統計信息。")
+        # 顯示代理統計信息
+        pm_instance = locals().get('proxy_manager') # Safely get proxy_manager
+        if pm_instance and hasattr(pm_instance, 'get_stats'):
+            logging.info("嘗試獲取並顯示代理統計信息。")
             try:
-                driver.quit()
+                stats = pm_instance.get_stats()
+                print("\n--- 代理使用情況總結 (CSV) ---")
+                if stats:
+                    print(f"  總共嘗試代理數量: {stats.get('proxies_tried_count', 'N/A')}")
+                    print(f"  代理輪換次數: {stats.get('successful_rotations', 'N/A')}")
+                    print(f"  代理失敗次數: {stats.get('failed_attempts_count', 'N/A')}")
+                    logging.info(f"代理統計: {stats}")
+                else:
+                    print("  未能獲取代理統計信息 (get_stats 返回空) 或未使用代理。")
+                    logging.info("未能獲取代理統計信息 (get_stats 返回空) 或未使用代理。")
+                print("-----------------------------")
+            except Exception as e_stats_display:
+                logging.error(f"顯示代理統計時發生錯誤: {str(e_stats_display)}", exc_info=True)
+                print(f"⚠️ 顯示代理統計時發生錯誤: {str(e_stats_display)}")
+        elif pm_instance:
+            logging.info("Proxy_manager 實例存在但沒有 get_stats 方法，或未使用代理。")
+            print("\n--- 代理統計信息不可用 (Proxy_manager 問題或未使用代理) ---")
+        else:
+            logging.info("未配置代理 (proxy_manager is None)。")
+            print("\n--- 未配置代理 (proxy_manager is None) --- ")
+        
+        current_driver = locals().get('driver') # Safely get driver
+        if current_driver:
+            logging.info("關閉瀏覽器驅動程式...")
+            print("⏳ 關閉瀏覽器驅動程式...")
+            try:
+                current_driver.quit()
                 logging.info("瀏覽器驅動程式已關閉。")
                 print("✓ 瀏覽器驅動程式已關閉。")
-            except Exception as e:
-                logging.error(f"關閉瀏覽器時發生錯誤: {e}")
-                print(f"❌ 關閉瀏覽器時發生錯誤: {e}")
+            except Exception as e_quit_driver:
+                logging.error(f"關閉瀏覽器時發生錯誤: {e_quit_driver}", exc_info=True)
+                print(f"❌ 關閉瀏覽器時發生錯誤: {e_quit_driver}")
+        else:
+            logging.info("瀏覽器驅動程式未初始化或已被關閉。")
+            print("ⓘ 瀏覽器驅動程式未初始化或已被關閉。")
 
     # 輸出所有結果摘要
     print(f"\n{'='*60}")
