@@ -31,14 +31,7 @@ from google_keyword_search import (
     random_scroll
 )
 
-# 導入代理管理器
-try:
-    from proxy_manager import ProxyManager
-    PROXY_SUPPORT = True
-except ImportError:
-    PROXY_SUPPORT = False
-    logging.warning("未找到proxy_manager模塊，代理功能將被禁用")
-    print("⚠️ 未找到proxy_manager模塊，代理功能將被禁用")
+
 
 # 設置日誌
 logging.basicConfig(
@@ -54,13 +47,6 @@ def parse_arguments():
     parser.add_argument("target_keywords", nargs="+", help="要在搜尋結果中尋找的目標關鍵字")
     parser.add_argument("--max-pages", type=int, default=5, help="最大搜尋頁數 (默認: 5)")
     parser.add_argument("--max-retries", type=int, default=3, help="最大重試次數 (默認: 3)")
-    
-    # 代理相關參數
-    if PROXY_SUPPORT:
-        parser.add_argument("--proxy-file", help="GSA Proxy導出的代理列表文件路徑")
-        parser.add_argument("--gsa-api-url", help="GSA Proxy API的URL（如果使用API獲取代理）")
-        parser.add_argument("--max-failed-attempts", type=int, default=3, help="代理失敗嘗試的最大次數 (默認: 3)")
-        parser.add_argument("--refresh-interval", type=int, default=600, help="刷新代理列表的時間間隔（秒）(默認: 600)")
     
     return parser.parse_args()
 
@@ -80,25 +66,8 @@ def main():
     print(f"📄 最大搜尋頁數: {max_pages}")
     print(f"🔄 最大重試次數: {max_retries}\n")
     
-    # 初始化代理管理器（如果啟用）
-    proxy_manager = None
-    if PROXY_SUPPORT:
-        if hasattr(args, 'proxy_file') and args.proxy_file or hasattr(args, 'gsa_api_url') and args.gsa_api_url:
-            proxy_manager = ProxyManager(
-                proxy_file_path=args.proxy_file if hasattr(args, 'proxy_file') else None,
-                gsa_api_url=args.gsa_api_url if hasattr(args, 'gsa_api_url') else None,
-                max_failed_attempts=args.max_failed_attempts if hasattr(args, 'max_failed_attempts') else 3,
-                refresh_interval=args.refresh_interval if hasattr(args, 'refresh_interval') else 600
-            )
-            print(f"✓ 已初始化代理管理器")
-            if hasattr(args, 'proxy_file') and args.proxy_file:
-                print(f"📁 代理文件: {args.proxy_file}")
-            if hasattr(args, 'gsa_api_url') and args.gsa_api_url:
-                print(f"🌐 GSA API URL: {args.gsa_api_url}")
-    
-    # 初始化WebDriver，使用新的代理
-    driver = setup_driver(proxy_manager)
-    current_proxy = proxy_manager.get_next_proxy() if proxy_manager else None
+    # 初始化WebDriver
+    driver = setup_driver()
     
     try:
         # 搜尋Google
@@ -110,20 +79,14 @@ def main():
             retry_count += 1
             print(f"\n🔄 搜尋失敗，正在重試 ({retry_count}/{max_retries})...\n")
             
-            # 如果有代理管理器，標記當前代理為無效並獲取新代理
-            if proxy_manager and current_proxy:
-                proxy_manager.mark_proxy_invalid(current_proxy)
-                current_proxy = None
-            
             # 關閉當前WebDriver
             try:
                 driver.quit()
             except:
                 pass
             
-            # 重新初始化WebDriver（使用新代理）
-            driver = setup_driver(proxy_manager)
-            current_proxy = proxy_manager.get_next_proxy() if proxy_manager else None
+            # 重新初始化WebDriver
+            driver = setup_driver()
             
             # 重新嘗試搜尋
             search_success = search_google(driver, search_query)
@@ -151,20 +114,14 @@ def main():
                         retry_count += 1
                         print(f"\n🔄 檢測到問題，正在重試 ({retry_count}/{max_retries})...\n")
                         
-                        # 如果有代理管理器，標記當前代理為無效並獲取新代理
-                        if proxy_manager and current_proxy:
-                            proxy_manager.mark_proxy_invalid(current_proxy)
-                            current_proxy = None
-                        
                         # 關閉當前WebDriver
                         try:
                             driver.quit()
                         except:
                             pass
                         
-                        # 重新初始化WebDriver（可能使用新代理）
-                        driver = setup_driver(proxy_manager)
-                        current_proxy = proxy_manager.get_proxy() if proxy_manager else None
+                        # 重新初始化WebDriver
+                        driver = setup_driver()
                         
                         # 重新搜尋
                         if not search_google(driver, search_query):
@@ -273,25 +230,7 @@ def main():
         print(f"\n❌ 執行過程中發生錯誤: {str(e)}")
     
     finally:
-        # 顯示代理統計信息 (如果啟用)
-        if PROXY_SUPPORT and proxy_manager:
-            try:
-                if hasattr(proxy_manager, 'get_stats'):
-                    stats = proxy_manager.get_stats() # 假設 proxy_manager 有 get_stats 方法
-                    print("\n--- 代理使用情況總結 ---")
-                    if stats:
-                        print(f"  總共嘗試代理數量: {stats.get('proxies_tried_count', 'N/A')}")
-                        print(f"  代理輪換次數: {stats.get('successful_rotations', 'N/A')}")
-                        print(f"  代理失敗次數: {stats.get('failed_attempts_count', 'N/A')}")
-                        # 可以根據實際 get_stats() 返回的內容調整
-                    else:
-                        print("  未能獲取代理統計信息。")
-                    print("--------------------------")
-                else:
-                    logging.info("ProxyManager.get_stats() 方法未實現，跳過代理統計。")
-            except Exception as e_stats_display:
-                logging.warning(f"顯示代理統計時發生錯誤: {str(e_stats_display)}")
-                print(f"⚠️ 顯示代理統計時發生錯誤: {str(e_stats_display)}")
+
 
         # 關閉WebDriver
         try:

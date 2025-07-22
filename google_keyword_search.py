@@ -34,14 +34,8 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import NoSuchElementException, TimeoutException, ElementNotInteractableException
 from webdriver_manager.chrome import ChromeDriverManager # 自動管理 ChromeDriver
 
-# 導入代理管理器
-try:
-    from proxy_manager import ProxyManager
-    PROXY_SUPPORT = True
-except ImportError:
-    PROXY_SUPPORT = False
-    logging.warning("未找到proxy_manager模塊，代理功能將被禁用")
-    print("⚠️ 未找到proxy_manager模塊，代理功能將被禁用")
+# logging.warning("代理功能已被禁用")
+# print("⚠️ 代理功能已被禁用")
 
 # 設置日誌
 logging.basicConfig(
@@ -51,8 +45,8 @@ logging.basicConfig(
 )
 
 
-def setup_driver(proxy_manager=None):
-    """設置並返回Chrome WebDriver，添加更多人為特徵，支持代理"""
+def setup_driver():
+    """設置並返回Chrome WebDriver，添加更多人為特徵"""
     chrome_options = Options()
     # 取消下面的註釋可以在背景運行Chrome（無界面模式）
     # chrome_options.add_argument("--headless")
@@ -81,17 +75,7 @@ def setup_driver(proxy_manager=None):
     ]
     chrome_options.add_argument(f"--user-agent={random.choice(user_agents)}")
     
-    # 如果提供了代理管理器，則使用代理
-    if proxy_manager:
-        try:
-            proxy_arg = proxy_manager.get_proxy_for_selenium()
-            if proxy_arg:
-                logging.info(f"使用代理: {proxy_arg}")
-                print(f"✓ 使用代理設置: {proxy_arg}")
-                chrome_options.add_argument(proxy_arg)
-        except Exception as e:
-            logging.error(f"設置代理時出錯: {str(e)}")
-            print(f"❌ 設置代理時出錯: {str(e)}")
+
     
     # 初始化WebDriver
     driver = None
@@ -131,6 +115,7 @@ def setup_driver(proxy_manager=None):
         driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
         
     except Exception as e:
+        logging.error(f"搜尋過程中發生錯誤: {str(e)}")
         logging.error(f"Failed to initialize Chrome WebDriver: {str(e)}")
         print(f"❌ Failed to initialize Chrome WebDriver: {str(e)}")
         if wdm_error_occurred:
@@ -149,7 +134,7 @@ def setup_driver(proxy_manager=None):
         print("\n💡 Note: This script now uses 'webdriver-manager'. If not installed, please run: pip install webdriver-manager")
         raise
 
-    return driver
+    return driver # 返回 driver
 
 
 def human_like_typing(element, text):
@@ -189,14 +174,15 @@ def check_for_captcha(driver):
     return False
 
 def handle_captcha(driver):
-    """處理Google驗證碼 - 等待30秒，然後自動關閉瀏覽器並返回False以觸發重新啟動"""
-    logging.warning("檢測到驗證碼！將等待30秒後關閉瀏覽器並觸發重新啟動...")
-    print("\n⚠️ 檢測到Google驗證碼！將等待30秒後關閉瀏覽器並觸發重新啟動...")
+    """處理Google驗證碼 - 等待30-60秒隨機時間，然後自動關閉瀏覽器並返回False以觸發重新啟動"""
+    # 隨機等待30-60秒，模擬真人行為
+    wait_time = random.uniform(30, 60)
+    logging.warning(f"檢測到驗證碼！將等待 {wait_time:.1f} 秒後關閉瀏覽器並觸發重新啟動...")
+    print(f"\n⚠️ 檢測到Google驗證碼！將等待 {wait_time:.1f} 秒後關閉瀏覽器並觸發重新啟動...")
 
-    # 等待10秒
-    wait_time = 10
-    logging.info(f"等待 {wait_time} 秒...")
-    print(f"⏳ 等待 {wait_time} 秒...")
+    # 等待隨機時間
+    logging.info(f"等待 {wait_time:.1f} 秒...")
+    print(f"⏳ 等待 {wait_time:.1f} 秒...")
     time.sleep(wait_time)
     
     # 關閉當前瀏覽器實例
@@ -205,13 +191,14 @@ def handle_captcha(driver):
         logging.info("已關閉瀏覽器")
         print("✓ 已關閉瀏覽器，準備重新啟動...")
     except Exception as e:
+        logging.error(f"搜尋過程中發生錯誤: {str(e)}")
         logging.error(f"關閉瀏覽器時出錯: {str(e)}")
         print(f"❌ 關閉瀏覽器時出錯: {str(e)}")
     
     # 直接返回False，讓調用函數知道需要重新初始化瀏覽器
     return False
 
-def search_google(driver, search_query):
+def search_google(driver, search_query, proxy_manager=None, current_proxy=None): # 添加 proxy_manager 和 current_proxy 參數
     """在Google上搜尋指定查詢詞，使用更人性化的方式"""
     try:
         # 直接構造搜尋URL
@@ -239,16 +226,18 @@ def search_google(driver, search_query):
             
     except TimeoutException:
         logging.error("等待搜尋結果頁面加載超時")
+        logging.error("等待搜尋結果頁面加載超時")
         print("❌ 等待搜尋結果頁面加載超時，可能是網絡問題或Google頁面結構變化")
         return False
             
     except Exception as e:
         logging.error(f"搜尋過程中發生錯誤: {str(e)}")
+        logging.error(f"搜尋過程中發生錯誤: {str(e)}")
         print(f"❌ 搜尋過程中發生錯誤: {str(e)}")
         return False
 
 
-def find_keyword_on_page(driver, target_keyword):
+def find_keyword_on_page(driver, target_keyword, proxy_manager=None, current_proxy=None):
     """在當前頁面查找目標關鍵字，添加更多人為行為"""
     # 檢查是否有驗證碼
     if check_for_captcha(driver):
@@ -294,7 +283,11 @@ def find_keyword_on_page(driver, target_keyword):
                 logging.info(f"找到 {len(elements)} 個包含關鍵字的元素")
                 print(f"找到 {len(elements)} 個包含關鍵字的元素")
         except Exception as e:
-            logging.warning(f"高亮顯示元素時出錯: {e}")
+            # 標記當前代理為失敗
+            if proxy_manager and current_proxy:
+                proxy_manager.mark_proxy_failed(current_proxy)
+            logging.error(f"搜尋過程中發生錯誤 (高亮元素): {str(e)}")
+            logging.warning(f"詳細錯誤 - 高亮顯示元素時出錯: {e}")
             print(f"高亮顯示元素時出錯: {e}")
             
         return True
@@ -304,7 +297,7 @@ def find_keyword_on_page(driver, target_keyword):
         return False
 
 
-def find_and_click_result(driver, target_keyword):
+def find_and_click_result(driver, target_keyword, proxy_manager=None, current_proxy=None):
     """在搜尋結果中查找包含特定關鍵字的鏈接，點擊並在指定時間後返回"""
     # 檢查是否有驗證碼
     if check_for_captcha(driver):
@@ -525,7 +518,8 @@ def find_and_click_result(driver, target_keyword):
             return False
         
     except Exception as e:
-        logging.error(f"點擊搜尋結果時出錯: {str(e)}")
+        logging.error(f"搜尋過程中發生錯誤 (點擊結果): {str(e)}")
+        logging.error(f"詳細錯誤 - 點擊搜尋結果時出錯: {str(e)}")
         print(f"❌ 點擊搜尋結果時出錯: {str(e)}")
         
         # 嘗試返回搜尋結果頁
@@ -597,7 +591,8 @@ def go_to_next_page(driver):
                 print("搜尋結果頁面顯示沒有找到結果，視為已到達最後一頁")
                 return False
         except Exception as e:
-            logging.warning(f"檢查'沒有找到結果'訊息時出錯: {str(e)}")
+            logging.error(f"搜尋過程中發生錯誤 (檢查無結果訊息): {str(e)}")
+            logging.warning(f"詳細錯誤 - 檢查'沒有找到結果'訊息時出錯: {str(e)}")
             # 繼續執行，不中斷流程
         
         # 使用多種選擇器嘗試找到下一頁按鈕，並加入重試機制
@@ -646,7 +641,8 @@ def go_to_next_page(driver):
                 except NoSuchElementException:
                     logging.debug(f"選擇器 {selector_type}:{selector_value} 未找到元素 (嘗試 {attempt + 1})")
                 except Exception as e:
-                    logging.debug(f"使用選擇器 {selector_type}:{selector_value} 查找下一頁按鈕時出錯 (嘗試 {attempt + 1}): {str(e)}")
+                    logging.error(f"搜尋過程中發生錯誤 (查找下一頁按鈕): {str(e)}")
+                    logging.debug(f"詳細錯誤 - 使用選擇器 {selector_type}:{selector_value} 查找下一頁按鈕時出錯 (嘗試 {attempt + 1}): {str(e)}")
                 
             if next_button:
                 break  # Break from retry loop if button found
@@ -727,6 +723,7 @@ def go_to_next_page(driver):
                     click_success = True
                     break
                 except TimeoutException:
+                    logging.error("等待搜尋結果頁面加載超時")
                     # 如果頁面沒有變化，嘗試檢查URL是否變化
                     new_url = driver.current_url
                     if new_url != current_url:
@@ -761,6 +758,7 @@ def go_to_next_page(driver):
         print("沒有更多頁面或找不到下一頁按鈕，已到達最後一頁")
         return False
     except TimeoutException:
+        logging.error("等待搜尋結果頁面加載超時")
         logging.warning("等待頁面加載超時")
         print("等待頁面加載超時，視為已到達最後一頁")
         # 超時可能意味著已經是最後一頁或出現其他問題，返回False以避免卡住
@@ -770,6 +768,7 @@ def go_to_next_page(driver):
         print("無法點擊下一頁按鈕，可能被其他元素遮擋或已到達最後一頁")
         return False
     except Exception as e:
+        logging.error(f"搜尋過程中發生錯誤: {str(e)}")
         logging.error(f"前往下一頁時出現未預期的錯誤: {str(e)}")
         print(f"前往下一頁時出現未預期的錯誤: {str(e)}，視為已到達最後一頁")
         # 任何未預期的錯誤都視為已到達最後一頁，避免卡住
@@ -777,11 +776,21 @@ def go_to_next_page(driver):
 
 
 def main():
+    # 初始化 ProxyManager
+    proxy_manager = None
+    if PROXY_SUPPORT:
+        # 假設 proxies.txt 在 resources 文件夾中
+        proxy_file_path = "resources/proxies.txt" 
+        # 或者你可以設置 GSA API URL
+        # gsa_api_url = "http://your-gsa-proxy-api-url"
+        proxy_manager = ProxyManager(proxy_file_path=proxy_file_path)
+
     # 設定固定的搜尋詞和目標關鍵字
     search_query = "123"
     # target_keyword = "人力銀行"
     target_keywords = []
     max_pages = 10  # 默認最多搜尋10頁
+    current_proxy = None # 初始化 current_proxy
 
     if len(sys.argv) < 3:
         print("使用方法: python google_keyword_search.py [搜尋詞] [目標關鍵字1] [目標關鍵字2] ... [最大頁數(可選)]")
@@ -834,12 +843,8 @@ def main():
             initial_search_successful = True # 首次搜尋成功
             
         except Exception as e:
-            logging.error(f"初始化或首次搜尋過程中發生錯誤: {str(e)}")
+            logging.error(f"搜尋過程中發生錯誤: {str(e)}")
             print(f"\n❌ 初始化或首次搜尋過程中發生錯誤: {str(e)}")
-            if proxy_manager and current_proxy: # 確保 current_proxy 不是 None
-                logging.warning(f"代理 {current_proxy['ip']}:{current_proxy['port']} 在初始化或首次搜尋過程中發生錯誤，將其移除")
-                print(f"⚠️ 代理 {current_proxy['ip']}:{current_proxy['port']} 在初始化或首次搜尋過程中發生錯誤，將其移除")
-                proxy_manager.remove_proxy(current_proxy)
             if driver:
                 driver.quit()
             print("將在10秒後重試...")
@@ -881,7 +886,7 @@ def main():
                 print(f"\n正在為 '{current_target_keyword}' 搜尋第 {page_num} 頁...")
                 
                 # 在當前頁面查找關鍵字
-                found_current_keyword = find_keyword_on_page(driver, current_target_keyword, proxy_manager, current_proxy)
+                found_current_keyword = find_keyword_on_page(driver, current_target_keyword) 
                 
                 # 如果返回False且driver已關閉，可能是遇到了驗證碼
                 if found_current_keyword is False and (driver is None or not driver.service.is_connectable()):
@@ -896,8 +901,8 @@ def main():
                     except:
                         pass
                     
-                    # 等待一段時間後重新啟動瀏覽器
-                    wait_time = random.uniform(5.0, 10.0)
+                    # 等待30-60秒隨機時間後重新啟動瀏覽器
+                    wait_time = random.uniform(30, 60)
                     print(f"等待 {wait_time:.1f} 秒後重新啟動瀏覽器...")
                     time.sleep(wait_time)
                     
@@ -905,12 +910,12 @@ def main():
                     if captcha_retry_count <= max_captcha_retries:
                         # 重新初始化瀏覽器
                         try:
-                            driver, current_proxy = setup_driver(proxy_manager) # 更新 current_proxy
+                            driver = setup_driver()
                             if driver is None:
                                 print("瀏覽器重新啟動失敗，跳過當前關鍵字...")
                                 break # 跳出循環，處理下一個關鍵字
                             # 重新搜尋
-                            if search_google(driver, search_query, proxy_manager, current_proxy):
+                            if search_google(driver, search_query):
                                 print("瀏覽器重新啟動成功，繼續搜尋...")
                                 page_num = 1  # 重置頁碼
                                 # continue # 同上，這裡的 continue 會重新開始 page_num 循環
@@ -921,7 +926,8 @@ def main():
                                 print("瀏覽器重新啟動後搜尋失敗，跳過當前關鍵字...")
                                 break  # 跳出循環，處理下一個關鍵字
                         except Exception as e:
-                            logging.error(f"重新啟動瀏覽器時出錯: {str(e)}")
+                            logging.error(f"搜尋過程中發生錯誤 (重啟瀏覽器1): {str(e)}")
+                            logging.error(f"詳細錯誤 - 重新啟動瀏覽器時出錯: {str(e)}")
                             print(f"❌ 重新啟動瀏覽器時出錯: {str(e)}")
                             break  # 跳出循環，處理下一個關鍵字
                     else:
@@ -934,7 +940,7 @@ def main():
                     print(f"成功在第 {page_num} 頁找到關鍵字 '{current_target_keyword}'")
                     
                     # 嘗試點擊包含關鍵字的搜尋結果
-                    clicked_current_keyword = find_and_click_result(driver, current_target_keyword)
+                    clicked_current_keyword = find_and_click_result(driver, current_target_keyword) 
                     
                     # 如果返回False且driver已關閉，可能是遇到了驗證碼
                     if clicked_current_keyword is False and (driver is None or not driver.service.is_connectable()):
@@ -949,8 +955,8 @@ def main():
                         except:
                             pass
                         
-                        # 等待一段時間後重新啟動瀏覽器
-                        wait_time = random.uniform(5.0, 10.0)
+                        # 等待30-60秒隨機時間後重新啟動瀏覽器
+                        wait_time = random.uniform(30, 60)
                         print(f"等待 {wait_time:.1f} 秒後重新啟動瀏覽器...")
                         time.sleep(wait_time)
                         
@@ -968,7 +974,8 @@ def main():
                                     print("瀏覽器重新啟動後搜尋失敗，跳過當前關鍵字...")
                                     break  # 跳出循環，處理下一個關鍵字
                             except Exception as e:
-                                logging.error(f"重新啟動瀏覽器時出錯: {str(e)}")
+                                logging.error(f"搜尋過程中發生錯誤 (重啟瀏覽器2): {str(e)}")
+                                logging.error(f"詳細錯誤 - 重新啟動瀏覽器時出錯: {str(e)}")
                                 print(f"❌ 重新啟動瀏覽器時出錯: {str(e)}")
                                 break  # 跳出循環，處理下一個關鍵字
                         else:
@@ -986,7 +993,8 @@ def main():
                         print(f"無法點擊包含關鍵字 '{current_target_keyword}' 的結果，繼續搜尋下一頁")
                 
                 # 如果沒找到或沒成功點擊，且還有下一頁，則繼續
-                next_page_result = go_to_next_page(driver, proxy_manager, current_proxy)
+                # 翻頁
+                next_page_result = go_to_next_page(driver)
                 
                 # 如果返回False且driver已關閉，可能是遇到了驗證碼
                 if next_page_result is False and (driver is None or not driver.service.is_connectable()):
@@ -1001,8 +1009,8 @@ def main():
                     except:
                         pass
                     
-                    # 等待一段時間後重新啟動瀏覽器
-                    wait_time = random.uniform(5.0, 10.0)
+                    # 等待30-60秒隨機時間後重新啟動瀏覽器
+                    wait_time = random.uniform(30, 60)
                     print(f"等待 {wait_time:.1f} 秒後重新啟動瀏覽器...")
                     time.sleep(wait_time)
                     
@@ -1012,7 +1020,7 @@ def main():
                         try:
                             driver = setup_driver()
                             # 重新搜尋
-                            if search_google(driver, search_query, proxy_manager, current_proxy):
+                            if search_google(driver, search_query):
                                 print("瀏覽器重新啟動成功，繼續搜尋...")
                                 page_num = 1  # 重置頁碼
                                 break  # 跳出內層循環，重新開始搜尋
@@ -1020,7 +1028,8 @@ def main():
                                 print("瀏覽器重新啟動後搜尋失敗，跳過當前關鍵字...")
                                 break  # 跳出循環，處理下一個關鍵字
                         except Exception as e:
-                            logging.error(f"重新啟動瀏覽器時出錯: {str(e)}")
+                            logging.error(f"搜尋過程中發生錯誤 (重啟瀏覽器1): {str(e)}")
+                            logging.error(f"詳細錯誤 - 重新啟動瀏覽器時出錯: {str(e)}")
                             print(f"❌ 重新啟動瀏覽器時出錯: {str(e)}")
                             break  # 跳出循環，處理下一個關鍵字
                     else:
@@ -1065,6 +1074,7 @@ def main():
                 time.sleep(random.uniform(2.0, 4.0))
 
         except Exception as e:
+            logging.error(f"搜尋過程中發生錯誤: {str(e)}")
             logging.error(f"處理關鍵字 '{current_target_keyword}' 過程中發生錯誤: {str(e)}")
             print(f"\n❌ 處理關鍵字 '{current_target_keyword}' 過程中發生錯誤: {str(e)}")
             all_keywords_processed = False
@@ -1083,12 +1093,14 @@ def main():
     except EOFError:
         print("\n輸入被中斷，程式結束")
     except Exception as e:
+        logging.error(f"搜尋過程中發生錯誤: {str(e)}")
         print(f"\n輸入過程中發生錯誤: {e}，程式結束")
         
     except KeyboardInterrupt:
         logging.info("用戶中斷程序")
         print("\n程序被用戶中斷")
     except Exception as e:
+        logging.error(f"搜尋過程中發生錯誤: {str(e)}")
         logging.error(f"執行過程中發生錯誤: {str(e)}")
         print(f"\n❌ 執行過程中發生錯誤: {str(e)}")
     finally:
@@ -1099,4 +1111,15 @@ def main():
 
 
 if __name__ == "__main__":
+    # 確保 PROXY_FILE 和 PROXY_API_URL 在 main 函數外部定義或傳入
+    # 這裡為了簡化，直接在 main 內部定義了示例值
+    # 如果要從命令行參數獲取，需要修改 argparse 部分
+    # parser = argparse.ArgumentParser(description="Google關鍵字搜尋工具")
+    # parser.add_argument("search_query", help="要搜尋的查詢詞")
+    # parser.add_argument("target_keywords", nargs='+', help="要查找的目標關鍵字")
+    # parser.add_argument("--max-pages", type=int, default=10, help="每個關鍵字最多搜尋的頁數")
+    # parser.add_argument("--proxy-file", default="resources/proxies.txt", help="代理列表文件路徑")
+    # parser.add_argument("--proxy-api-url", help="代理API URL")
+    # args = parser.parse_args()
+    # main(args.search_query, args.target_keywords, args.max_pages, args.proxy_file, args.proxy_api_url)
     main()
