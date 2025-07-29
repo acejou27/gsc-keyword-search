@@ -1,0 +1,38 @@
+{
+  "timestamp": "$(date -Iseconds)",
+  "totalSearches": 4,
+  "successfulSearches": 4,
+  "duration": 8500,
+  "results": [
+    {
+      "searchQuery": "Python 教學",
+      "targetKeywords": ["Django"],
+      "success": true,
+      "results": {
+        "Django": {
+          "found": true,
+          "page": 1,
+          "position": 3,
+          "title": "Django 官方文檔",
+          "url": "https://docs.djangoproject.com/",
+          "snippet": "Django 是一個高級的 Python Web 框架"
+        }
+      }
+    },
+    {
+      "searchQuery": "SEO 優化", 
+      "targetKeywords": ["Google"],
+      "success": true,
+      "results": {
+        "Google": {
+          "found": true,
+          "page": 1,
+          "position": 1,
+          "title": "Google SEO 指南",
+          "url": "https://developers.google.com/search",
+          "snippet": "Google 搜索引擎優化指南"
+        }
+      }
+    }
+  ]
+}
