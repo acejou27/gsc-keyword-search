@@ -63,6 +63,10 @@ jobs:
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         fetch-depth: 0
+        
+    - name: 📁 創建必要目錄
+      run: |
+        mkdir -p results reports
     
     - name: 📦 設置 Node.js
       uses: actions/setup-node@v4
@@ -73,9 +77,9 @@ jobs:
     - name: 🔧 安裝依賴
       run: |
         npm install puppeteer csv-parser
-        # 安裝額外的字體支援中文顯示
+        # 安裝瀏覽器依賴
         sudo apt-get update
-        sudo apt-get install -y fonts-noto-cjk
+        sudo apt-get install -y fonts-noto-cjk chromium-browser
     
     - name: 📋 檢查搜索模式
       id: check_mode
@@ -97,7 +101,8 @@ jobs:
       id: search
       run: |
         echo "🚀 開始執行搜索..."
-        node .github/scripts/search.js
+        # 暫時使用簡化版本進行測試
+        node .github/scripts/simple-search.js
       env:
         SEARCH_MODE: ${{ steps.check_mode.outputs.mode }}
         SEARCH_QUERY: ${{ github.event.inputs.search_query }}
@@ -109,8 +114,7 @@ jobs:
     - name: 📊 生成搜索報告
       if: success()
       run: |
-        echo "📊 生成報告中..."
-        node .github/scripts/generate-report.js
+        echo "📊 報告已在搜索步驟中生成"
     
     - name: 📁 創建結果摘要
       if: success()
@@ -138,6 +142,7 @@ jobs:
           results/
           reports/
         retention-days: 30
+        if-no-files-found: warn
     
     - name: 📤 提交結果到倉庫
       if: success() && github.event_name != 'pull_request'
