@@ -1,0 +1,34 @@
+title: GSC關鍵字搜索工具
+description: 自動化Google關鍵字搜索和排名監控工具
+baseurl: ""
+url: ""
+
+# GitHub Pages 設定
+plugins:
+  - jekyll-feed
+  - jekyll-sitemap
+
+# 主題設定
+theme: minima
+
+# 導航設定
+header_pages:
+  - index.html
+
+# 社交連結
+github_username: your-username
+
+# 其他設定
+markdown: kramdown
+highlighter: rouge
+permalink: pretty
+
+# 排除文件
+exclude:
+  - Gemfile
+  - Gemfile.lock
+  - node_modules
+  - vendor/bundle/
+  - vendor/cache/
+  - vendor/gems/
+  - vendor/ruby/

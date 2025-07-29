@@ -1,0 +1,37 @@
+name = "gsc-keyword-search"
+main = "src/index.js"
+compatibility_date = "2024-01-15"
+compatibility_flags = ["nodejs_compat"]
+
+[env.production]
+name = "gsc-keyword-search-prod"
+
+[env.staging]
+name = "gsc-keyword-search-staging"
+
+# KV 命名空間用於存儲搜索結果和配置
+[[kv_namespaces]]
+binding = "SEARCH_RESULTS"
+id = "your-kv-namespace-id"
+preview_id = "your-preview-kv-namespace-id"
+
+[[kv_namespaces]]
+binding = "CONFIG"
+id = "your-config-kv-namespace-id"
+preview_id = "your-preview-config-kv-namespace-id"
+
+# 環境變量
+[vars]
+ENVIRONMENT = "development"
+MAX_SEARCH_PAGES = "10"
+DEFAULT_RETRY_COUNT = "3"
+RATE_LIMIT_PER_MINUTE = "60"
+
+# Durable Objects (可選，用於狀態管理)
+# [[durable_objects.bindings]]
+# name = "SEARCH_STATE"
+# class_name = "SearchState"
+
+# 觸發器配置
+[[triggers]]
+crons = ["0 */6 * * *"]  # 每6小時執行一次

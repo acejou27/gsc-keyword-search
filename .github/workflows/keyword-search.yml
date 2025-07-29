@@ -1,0 +1,289 @@
+name: 🔍 GSC關鍵字搜索
+
+on:
+  # 定時執行 - 每6小時執行一次
+  schedule:
+    - cron: '0 */6 * * *'
+  
+  # 手動觸發 - 提供更友好的界面
+  workflow_dispatch:
+    inputs:
+      search_mode:
+        description: '搜索模式'
+        required: true
+        default: 'csv'
+        type: choice
+        options:
+        - csv
+        - manual
+      search_query:
+        description: '搜索詞 (手動模式)'
+        required: false
+        default: 'Python 教學'
+      target_keywords:
+        description: '目標關鍵字 (手動模式，用逗號分隔)'
+        required: false
+        default: 'Django,Flask,FastAPI'
+      max_pages:
+        description: '最大搜索頁數'
+        required: false
+        default: '5'
+        type: choice
+        options:
+        - '3'
+        - '5'
+        - '10'
+        - '15'
+      enable_notifications:
+        description: '啟用結果通知'
+        required: false
+        default: true
+        type: boolean
+  
+  # 自動觸發 - 當關鍵字文件更新時
+  push:
+    paths:
+      - 'keywords.csv'
+      - 'keywords-*.csv'
+      - '.github/workflows/keyword-search.yml'
+  
+  # Pull Request 觸發 - 用於測試
+  pull_request:
+    paths:
+      - 'keywords.csv'
+      - 'keywords-*.csv'
+
+jobs:
+  search:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 🚀 檢出代碼
+      uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        fetch-depth: 0
+    
+    - name: 📦 設置 Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+    
+    - name: 🔧 安裝依賴
+      run: |
+        npm install puppeteer csv-parser
+        # 安裝額外的字體支援中文顯示
+        sudo apt-get update
+        sudo apt-get install -y fonts-noto-cjk
+    
+    - name: 📋 檢查搜索模式
+      id: check_mode
+      run: |
+        if [ "${{ github.event.inputs.search_mode }}" = "manual" ]; then
+          echo "mode=manual" >> $GITHUB_OUTPUT
+        else
+          echo "mode=csv" >> $GITHUB_OUTPUT
+        fi
+        
+        # 檢查是否有 keywords.csv 文件
+        if [ -f "keywords.csv" ]; then
+          echo "csv_exists=true" >> $GITHUB_OUTPUT
+        else
+          echo "csv_exists=false" >> $GITHUB_OUTPUT
+        fi
+    
+    - name: 🔍 執行關鍵字搜索
+      id: search
+      run: |
+        echo "🚀 開始執行搜索..."
+        node .github/scripts/search.js
+      env:
+        SEARCH_MODE: ${{ steps.check_mode.outputs.mode }}
+        SEARCH_QUERY: ${{ github.event.inputs.search_query }}
+        TARGET_KEYWORDS: ${{ github.event.inputs.target_keywords }}
+        MAX_PAGES: ${{ github.event.inputs.max_pages || '5' }}
+        GITHUB_ACTOR: ${{ github.actor }}
+        GITHUB_RUN_NUMBER: ${{ github.run_number }}
+    
+    - name: 📊 生成搜索報告
+      if: success()
+      run: |
+        echo "📊 生成報告中..."
+        node .github/scripts/generate-report.js
+    
+    - name: 📁 創建結果摘要
+      if: success()
+      run: |
+        echo "## 🔍 搜索結果摘要" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        if [ -f "results/latest.json" ]; then
+          node -e "
+            const data = JSON.parse(require('fs').readFileSync('results/latest.json', 'utf8'));
+            console.log(\`- **執行時間**: \${new Date(data.timestamp).toLocaleString('zh-TW')}\`);
+            console.log(\`- **總搜索次數**: \${data.totalSearches}\`);
+            console.log(\`- **成功搜索**: \${data.successfulSearches}\`);
+            console.log(\`- **成功率**: \${Math.round((data.successfulSearches / data.totalSearches) * 100)}%\`);
+          " >> $GITHUB_STEP_SUMMARY
+        fi
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "📈 [查看詳細報告](./reports/latest-report.html)" >> $GITHUB_STEP_SUMMARY
+    
+    - name: 💾 上傳結果到 Artifacts
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: search-results-${{ github.run_number }}
+        path: |
+          results/
+          reports/
+        retention-days: 30
+    
+    - name: 📤 提交結果到倉庫
+      if: success() && github.event_name != 'pull_request'
+      run: |
+        git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
+        git config --local user.name "github-actions[bot]"
+        
+        # 添加結果文件
+        git add results/ reports/ README.md
+        
+        # 檢查是否有變更
+        if git diff --staged --quiet; then
+          echo "📝 沒有新的搜索結果需要提交"
+        else
+          # 創建提交信息
+          COMMIT_MSG="🔍 搜索結果更新 - $(date '+%Y-%m-%d %H:%M:%S')
+          
+          🤖 由 GitHub Actions 自動執行
+          👤 觸發者: ${{ github.actor }}
+          🔢 運行編號: ${{ github.run_number }}
+          📊 搜索模式: ${{ steps.check_mode.outputs.mode }}"
+          
+          git commit -m "$COMMIT_MSG"
+          git push
+          echo "✅ 搜索結果已提交到倉庫"
+        fi
+    
+    - name: 🔔 創建成功通知 Issue
+      if: success() && github.event.inputs.enable_notifications == 'true'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          // 讀取最新結果
+          const fs = require('fs');
+          let resultSummary = '無法讀取結果摘要';
+          
+          try {
+            if (fs.existsSync('results/latest.json')) {
+              const data = JSON.parse(fs.readFileSync('results/latest.json', 'utf8'));
+              resultSummary = `
+              - **執行時間**: ${new Date(data.timestamp).toLocaleString('zh-TW')}
+              - **總搜索次數**: ${data.totalSearches}
+              - **成功搜索**: ${data.successfulSearches}
+              - **成功率**: ${Math.round((data.successfulSearches / data.totalSearches) * 100)}%
+              - **執行時長**: ${Math.round(data.duration / 1000)}秒
+              `;
+            }
+          } catch (error) {
+            console.log('讀取結果文件時出錯:', error);
+          }
+          
+          // 檢查是否已有相同的通知 Issue
+          const issues = await github.rest.issues.listForRepo({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            labels: 'search-notification',
+            state: 'open'
+          });
+          
+          // 如果有開啟的通知 Issue，先關閉它們
+          for (const issue of issues.data) {
+            await github.rest.issues.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue.number,
+              state: 'closed'
+            });
+          }
+          
+          // 創建新的通知 Issue
+          await github.rest.issues.create({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            title: `✅ 關鍵字搜索完成 - ${new Date().toLocaleDateString('zh-TW')}`,
+            body: `
+              ## 🎉 搜索任務成功完成！
+              
+              **觸發者**: @${context.actor}
+              **運行編號**: #${context.runNumber}
+              **執行時間**: ${new Date().toLocaleString('zh-TW')}
+              
+              ## 📊 結果摘要
+              ${resultSummary}
+              
+              ## 🔗 相關連結
+              - 📈 [查看詳細報告](./reports/latest-report.html)
+              - 📋 [下載結果文件](../../actions/runs/${context.runId})
+              - 🔍 [查看執行日誌](../../actions/runs/${context.runId})
+              
+              ---
+              
+              *此 Issue 由 GitHub Actions 自動創建，會在下次搜索完成時自動關閉。*
+            `,
+            labels: ['search-notification', 'automated', 'success']
+          });
+    
+    - name: 🚨 創建失敗通知 Issue
+      if: failure()
+      uses: actions/github-script@v7
+      with:
+        script: |
+          await github.rest.issues.create({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            title: '🚨 關鍵字搜索失敗',
+            body: `
+              ## ❌ 搜索任務執行失敗
+              
+              **觸發者**: @${context.actor}
+              **運行編號**: #${context.runNumber}
+              **失敗時間**: ${new Date().toLocaleString('zh-TW')}
+              **搜索模式**: ${{ steps.check_mode.outputs.mode }}
+              
+              ## 🔍 可能的原因
+              - Google 反爬蟲機制觸發
+              - 網絡連接問題
+              - keywords.csv 格式錯誤
+              - 系統資源不足
+              
+              ## 🛠️ 建議解決方案
+              1. 檢查 [執行日誌](../../actions/runs/${context.runId}) 獲取詳細錯誤信息
+              2. 驗證 keywords.csv 文件格式是否正確
+              3. 等待一段時間後重新執行
+              4. 考慮降低搜索頻率或減少關鍵字數量
+              
+              ## 🔗 相關連結
+              - 🔍 [查看執行日誌](../../actions/runs/${context.runId})
+              - 📝 [編輯關鍵字文件](./keywords.csv)
+              - 🔄 [重新執行搜索](../../actions/workflows/keyword-search.yml)
+              
+              ---
+              
+              *請查看錯誤日誌並修復問題後重新執行搜索。*
+            `,
+            labels: ['bug', 'automated', 'search-failure'],
+            assignees: [context.actor]
+          });
+
+  notify:
+    needs: search
+    runs-on: ubuntu-latest
+    if: always()
+    
+    steps:
+    - name: 發送通知 (可選)
+      if: needs.search.result == 'success'
+      run: |
+        echo "搜索任務完成！結果已保存到倉庫。"
+        # 這裡可以添加其他通知方式，如 Slack、Discord 等
