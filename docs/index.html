@@ -316,13 +316,13 @@
             <a href="#" class="btn btn-primary" id="refreshBtn">
                 🔄 刷新數據
             </a>
-            <a href="../keywords.csv" class="btn btn-secondary">
+            <a href="https://github.com/acejou27/gsc-keyword-search/blob/main/keywords.csv" class="btn btn-secondary">
                 📝 編輯關鍵字
             </a>
-            <a href="../reports/latest-report.html" class="btn btn-secondary">
+            <a href="./reports/latest-report.html" class="btn btn-secondary">
                 📊 詳細報告
             </a>
-            <a href="../../actions" class="btn btn-secondary">
+            <a href="https://github.com/acejou27/gsc-keyword-search/actions" class="btn btn-secondary">
                 ⚙️ GitHub Actions
             </a>
         </div>
@@ -349,7 +349,7 @@
         // 載入搜索結果
         async function loadResults() {
             try {
-                const response = await fetch('../results/latest.json');
+                const response = await fetch('./results/latest.json');
                 if (!response.ok) {
                     throw new Error('無法載入結果文件');
                 }

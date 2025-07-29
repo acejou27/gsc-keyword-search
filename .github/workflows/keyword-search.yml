@@ -74,12 +74,10 @@ jobs:
         node-version: '18'
         cache: 'npm'
     
-    - name: 🔧 安裝依賴
+    - name: 🔧 準備環境
       run: |
-        npm install puppeteer csv-parser
-        # 安裝瀏覽器依賴
-        sudo apt-get update
-        sudo apt-get install -y fonts-noto-cjk chromium-browser
+        echo "準備執行環境..."
+        # 暫時跳過複雜的依賴安裝
     
     - name: 📋 檢查搜索模式
       id: check_mode

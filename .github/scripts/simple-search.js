@@ -76,6 +76,15 @@ async function createTestResults() {
     // 保存結果
     await fs.writeFile('results/latest.json', JSON.stringify(testResults, null, 2));
     
+    // 同時複製到 docs 目錄供 GitHub Pages 使用
+    try {
+        await fs.mkdir('docs/results', { recursive: true });
+        await fs.mkdir('docs/reports', { recursive: true });
+        await fs.writeFile('docs/results/latest.json', JSON.stringify(testResults, null, 2));
+    } catch (error) {
+        console.log('複製到 docs 目錄時出錯:', error.message);
+    }
+    
     // 創建簡單的 HTML 報告
     const htmlReport = `
 <!DOCTYPE html>
@@ -126,6 +135,13 @@ async function createTestResults() {
 </html>`;
     
     await fs.writeFile('reports/latest-report.html', htmlReport);
+    
+    // 同時複製到 docs 目錄
+    try {
+        await fs.writeFile('docs/reports/latest-report.html', htmlReport);
+    } catch (error) {
+        console.log('複製報告到 docs 目錄時出錯:', error.message);
+    }
     
     console.log('✅ 測試結果創建完成！');
 }
