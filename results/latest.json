@@ -1,38 +1,18 @@
 {
-  "timestamp": "$(date -Iseconds)",
-  "totalSearches": 4,
-  "successfulSearches": 4,
-  "duration": 8500,
+  "timestamp": "2025-07-30T02:53:11.449Z",
+  "duration": 107811,
+  "totalSearches": 1,
+  "successfulSearches": 0,
   "results": [
     {
-      "searchQuery": "Python 教學",
-      "targetKeywords": ["Django"],
-      "success": true,
-      "results": {
-        "Django": {
-          "found": true,
-          "page": 1,
-          "position": 3,
-          "title": "Django 官方文檔",
-          "url": "https://docs.djangoproject.com/",
-          "snippet": "Django 是一個高級的 Python Web 框架"
-        }
-      }
-    },
-    {
-      "searchQuery": "SEO 優化", 
-      "targetKeywords": ["Google"],
-      "success": true,
-      "results": {
-        "Google": {
-          "found": true,
-          "page": 1,
-          "position": 1,
-          "title": "Google SEO 指南",
-          "url": "https://developers.google.com/search",
-          "snippet": "Google 搜索引擎優化指南"
-        }
-      }
+      "query": "SEO 優化",
+      "keywords": [
+        "Google"
+      ],
+      "domain": "example.com",
+      "error": "CAPTCHA detected",
+      "timestamp": "2025-07-30T02:51:24.860Z",
+      "success": false
     }
   ]
 }
