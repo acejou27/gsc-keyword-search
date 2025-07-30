@@ -1,10 +1,10 @@
-name: 🔍 真實 Google 搜索與點擊
+name: Google Search Bot
 
 on:
   workflow_dispatch:
     inputs:
       search_mode:
-        description: '搜索模式'
+        description: 'Search Mode'
         required: true
         default: 'csv'
         type: choice
@@ -12,15 +12,15 @@ on:
           - csv
           - manual
       search_query:
-        description: '搜索詞 (手動模式)'
+        description: 'Search Query (manual mode)'
         required: false
-        default: 'Python 教學'
+        default: 'Python tutorial'
       target_keywords:
-        description: '目標關鍵字 (手動模式，用逗號分隔)'
+        description: 'Target Keywords (comma separated)'
         required: false
         default: 'Django,Flask'
       max_pages:
-        description: '最大搜索頁數'
+        description: 'Max Pages'
         required: false
         default: '5'
         type: choice
@@ -29,15 +29,14 @@ on:
           - '5'
           - '10'
       target_domain:
-        description: '目標網域 (要點擊的網站)'
+        description: 'Target Domain'
         required: false
-        default: 'docs.djangoproject.com'
+        default: 'example.com'
   
-  # 隨機執行時間：24小時內執行2-3次
   schedule:
-    - cron: '15 3 * * *'   # 每天 03:15 (隨機時間1)
-    - cron: '42 11 * * *'  # 每天 11:42 (隨機時間2)  
-    - cron: '28 19 * * *'  # 每天 19:28 (隨機時間3)
+    - cron: '15 3 * * *'
+    - cron: '42 11 * * *'
+    - cron: '28 19 * * *'
   
   push:
     paths:
@@ -47,124 +46,114 @@ permissions:
   contents: write
 
 jobs:
-  # 隨機決定是否執行 (66% 機率執行，實現平均每天2-3次)
   random-check:
     runs-on: ubuntu-latest
     outputs:
       should_run: ${{ steps.random.outputs.should_run }}
     steps:
-      - name: 🎲 隨機決定是否執行
+      - name: Random Check
         id: random
         run: |
-          # 生成 1-100 的隨機數
           RANDOM_NUM=$((RANDOM % 100 + 1))
-          echo "隨機數: $RANDOM_NUM"
+          echo "Random number: $RANDOM_NUM"
           
-          # 66% 機率執行 (1-66 執行，67-100 跳過)
           if [ $RANDOM_NUM -le 66 ]; then
             echo "should_run=true" >> $GITHUB_OUTPUT
-            echo "✅ 決定執行搜索 (隨機數: $RANDOM_NUM <= 66)"
+            echo "Will execute search (random: $RANDOM_NUM <= 66)"
           else
             echo "should_run=false" >> $GITHUB_OUTPUT
-            echo "⏭️ 跳過此次執行 (隨機數: $RANDOM_NUM > 66)"
+            echo "Skip execution (random: $RANDOM_NUM > 66)"
           fi
 
   search:
     needs: random-check
     runs-on: ubuntu-latest
-    # 只有在隨機檢查通過或手動觸發時才執行
     if: needs.random-check.outputs.should_run == 'true' || github.event_name == 'workflow_dispatch' || github.event_name == 'push'
     
     steps:
-    - name: 📥 檢出代碼
+    - name: Checkout
       uses: actions/checkout@v4
     
-    - name: 🔧 設置 Node.js 環境
+    - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
         node-version: '18'
     
-    - name: 📦 安裝依賴
+    - name: Install Dependencies
       run: |
         npm init -y
         npm install puppeteer csv-parser
-        
-        # 安裝瀏覽器依賴
         sudo apt-get update
         sudo apt-get install -y fonts-noto-cjk
     
-    - name: 📁 創建目錄
+    - name: Create Directories
       run: |
         mkdir -p results reports docs/results docs/reports
     
-    - name: ⏰ 隨機延遲開始
+    - name: Random Delay
       run: |
-        # 隨機延遲 0-300 秒 (0-5分鐘)，避免同時執行
         DELAY=$((RANDOM % 300))
-        echo "⏰ 隨機延遲 $DELAY 秒後開始執行..."
+        echo "Random delay: $DELAY seconds"
         sleep $DELAY
     
-    - name: 🔍 執行真實 Google 搜索
+    - name: Execute Google Search
       run: |
         cat > search.js << 'EOF'
         const puppeteer = require('puppeteer');
         const fs = require('fs').promises;
         const csv = require('csv-parser');
         
-        class GoogleSearchBot {
+        class SearchBot {
           constructor() {
             this.results = [];
             this.startTime = new Date();
           }
         
           async run() {
-            console.log('🚀 開始執行真實 Google 搜索');
+            console.log('Starting Google search...');
             
             try {
-              const searchParams = await this.getSearchParameters();
-              console.log('📋 搜索參數:', searchParams);
+              const params = await this.getParams();
+              console.log('Search params:', params);
               
-              for (const params of searchParams) {
-                await this.executeSearch(params);
-                // 搜索間隔隨機延遲 30-120 秒
+              for (const param of params) {
+                await this.search(param);
                 const delay = Math.floor(Math.random() * 90000) + 30000;
-                console.log(`⏰ 等待 ${Math.round(delay/1000)} 秒後執行下一個搜索...`);
+                console.log(`Waiting ${Math.round(delay/1000)} seconds...`);
                 await new Promise(resolve => setTimeout(resolve, delay));
               }
               
               await this.saveResults();
-              console.log('✅ 搜索任務完成');
+              console.log('Search completed');
               
             } catch (error) {
-              console.error('❌ 搜索任務失敗:', error);
+              console.error('Search failed:', error);
               process.exit(1);
             }
           }
         
-          async getSearchParameters() {
+          async getParams() {
             const params = [];
             
             if (process.env.SEARCH_MODE === 'manual' && process.env.SEARCH_QUERY) {
               params.push({
-                searchQuery: process.env.SEARCH_QUERY,
-                targetKeywords: process.env.TARGET_KEYWORDS.split(',').map(k => k.trim()),
-                targetDomain: process.env.TARGET_DOMAIN || '',
-                maxPages: parseInt(process.env.MAX_PAGES) || 5
+                query: process.env.SEARCH_QUERY,
+                keywords: process.env.TARGET_KEYWORDS.split(',').map(k => k.trim()),
+                domain: process.env.TARGET_DOMAIN || '',
+                pages: parseInt(process.env.MAX_PAGES) || 5
               });
             } else {
               try {
-                const csvData = await this.readCSVFile('keywords.csv');
-                // 隨機選擇 1-3 個關鍵字組合，避免一次處理太多
+                const csvData = await this.readCSV('keywords.csv');
                 const shuffled = csvData.sort(() => 0.5 - Math.random());
                 const selected = shuffled.slice(0, Math.floor(Math.random() * 3) + 1);
                 params.push(...selected);
               } catch (error) {
-                console.warn('⚠️ 無法讀取 CSV 文件，使用默認參數');
                 params.push({
-                  searchQuery: 'Python 教學',
-                  targetKeywords: ['Django'],
-                  targetDomain: process.env.TARGET_DOMAIN || '',
-                  maxPages: 3
+                  query: 'Python tutorial',
+                  keywords: ['Django'],
+                  domain: process.env.TARGET_DOMAIN || '',
+                  pages: 3
                 });
               }
             }
@@ -172,24 +161,24 @@ jobs:
             return params;
           }
         
-          async readCSVFile(filePath) {
+          async readCSV(file) {
             const results = [];
             
             return new Promise((resolve, reject) => {
-              require('fs').createReadStream(filePath)
+              require('fs').createReadStream(file)
                 .pipe(csv({ headers: false }))
                 .on('data', (row) => {
                   const values = Object.values(row).filter(v => v && v.trim());
                   if (values.length >= 2) {
-                    const targetKeyword = values[values.length - 1];
-                    const searchKeywords = values.slice(0, -1);
+                    const target = values[values.length - 1];
+                    const searches = values.slice(0, -1);
                     
-                    searchKeywords.forEach(searchQuery => {
+                    searches.forEach(query => {
                       results.push({
-                        searchQuery: searchQuery.trim(),
-                        targetKeywords: [targetKeyword.trim()],
-                        targetDomain: process.env.TARGET_DOMAIN || '',
-                        maxPages: Math.floor(Math.random() * 3) + 3 // 3-5 頁隨機
+                        query: query.trim(),
+                        keywords: [target.trim()],
+                        domain: process.env.TARGET_DOMAIN || '',
+                        pages: Math.floor(Math.random() * 3) + 3
                       });
                     });
                   }
@@ -199,8 +188,8 @@ jobs:
             });
           }
         
-          async executeSearch({ searchQuery, targetKeywords, targetDomain, maxPages }) {
-            console.log(`🔍 搜索: "${searchQuery}" -> [${targetKeywords.join(', ')}]`);
+          async search({ query, keywords, domain, pages }) {
+            console.log(`Searching: "${query}" -> [${keywords.join(', ')}]`);
             
             let browser;
             try {
@@ -215,7 +204,6 @@ jobs:
                   '--disable-extensions',
                   '--disable-plugins',
                   '--disable-images',
-                  '--disable-javascript',
                   '--user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
                 ]
               });
@@ -223,26 +211,26 @@ jobs:
               const page = await browser.newPage();
               await this.setupPage(page);
               
-              const searchResults = await this.performSearch(page, searchQuery, targetKeywords, targetDomain, maxPages);
+              const searchResults = await this.performSearch(page, query, keywords, domain, pages);
               
               this.results.push({
-                searchQuery,
-                targetKeywords,
-                targetDomain,
+                query,
+                keywords,
+                domain,
                 results: searchResults,
                 timestamp: new Date().toISOString(),
                 success: true
               });
               
-              console.log(`✅ 完成搜索: ${searchQuery}`);
+              console.log(`Completed: ${query}`);
               
             } catch (error) {
-              console.error(`❌ 搜索失敗 "${searchQuery}":`, error.message);
+              console.error(`Failed "${query}":`, error.message);
               
               this.results.push({
-                searchQuery,
-                targetKeywords,
-                targetDomain,
+                query,
+                keywords,
+                domain,
                 error: error.message,
                 timestamp: new Date().toISOString(),
                 success: false
@@ -271,35 +259,35 @@ jobs:
             });
           }
         
-          async performSearch(page, searchQuery, targetKeywords, targetDomain, maxPages) {
+          async performSearch(page, query, keywords, domain, pages) {
             const results = {};
             
-            targetKeywords.forEach(keyword => {
+            keywords.forEach(keyword => {
               results[keyword] = { found: false, clicked: false };
             });
         
             try {
-              const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(searchQuery)}&hl=zh-TW&gl=TW`;
-              console.log(`  🌐 訪問: ${searchUrl}`);
+              const url = `https://www.google.com/search?q=${encodeURIComponent(query)}&hl=zh-TW&gl=TW`;
+              console.log(`  Visiting: ${url}`);
               
-              await page.goto(searchUrl, { 
+              await page.goto(url, { 
                 waitUntil: 'domcontentloaded',
                 timeout: 30000 
               });
         
-              if (await this.checkForCaptcha(page)) {
-                throw new Error('遇到 Google 驗證碼');
+              if (await this.checkCaptcha(page)) {
+                throw new Error('CAPTCHA detected');
               }
         
-              for (let currentPage = 1; currentPage <= maxPages; currentPage++) {
-                console.log(`  📄 搜索第 ${currentPage} 頁`);
+              for (let currentPage = 1; currentPage <= pages; currentPage++) {
+                console.log(`  Page ${currentPage}`);
                 
                 try {
                   await page.waitForSelector('#search', { timeout: 10000 });
                   
-                  await this.humanScroll(page);
+                  await this.scroll(page);
                   
-                  const pageResults = await this.searchOnPage(page, targetKeywords, targetDomain, currentPage);
+                  const pageResults = await this.searchPage(page, keywords, domain, currentPage);
                   
                   Object.keys(pageResults).forEach(keyword => {
                     if (pageResults[keyword].found && !results[keyword].found) {
@@ -307,29 +295,29 @@ jobs:
                     }
                   });
         
-                  const allFound = targetKeywords.every(keyword => results[keyword].found);
+                  const allFound = keywords.every(keyword => results[keyword].found);
                   if (allFound) break;
         
-                  if (currentPage < maxPages) {
-                    const hasNext = await this.goToNextPage(page);
+                  if (currentPage < pages) {
+                    const hasNext = await this.nextPage(page);
                     if (!hasNext) break;
                   }
                   
                 } catch (error) {
-                  console.warn(`  ⚠️ 第 ${currentPage} 頁出錯:`, error.message);
+                  console.warn(`  Page ${currentPage} error:`, error.message);
                   break;
                 }
               }
         
             } catch (error) {
-              console.error('搜索執行錯誤:', error);
+              console.error('Search error:', error);
               throw error;
             }
         
             return results;
           }
         
-          async searchOnPage(page, targetKeywords, targetDomain, pageNumber) {
+          async searchPage(page, keywords, domain, pageNumber) {
             const results = {};
             
             const searchResults = await page.$$eval('#search .g', (elements) => {
@@ -347,14 +335,14 @@ jobs:
               });
             });
         
-            for (const keyword of targetKeywords) {
+            for (const keyword of keywords) {
               results[keyword] = { found: false, clicked: false };
               
               for (const result of searchResults) {
-                const searchText = `${result.title} ${result.snippet}`.toLowerCase();
-                const urlMatch = targetDomain ? result.url.includes(targetDomain) : true;
+                const text = `${result.title} ${result.snippet}`.toLowerCase();
+                const urlMatch = domain ? result.url.includes(domain) : true;
                 
-                if (searchText.includes(keyword.toLowerCase()) && urlMatch) {
+                if (text.includes(keyword.toLowerCase()) && urlMatch) {
                   results[keyword] = {
                     found: true,
                     page: pageNumber,
@@ -365,33 +353,33 @@ jobs:
                     clicked: false
                   };
                   
-                  console.log(`    ✅ 找到 "${keyword}" 在第 ${pageNumber} 頁第 ${result.position} 位`);
+                  console.log(`    Found "${keyword}" at page ${pageNumber} position ${result.position}`);
                   
-                  if (targetDomain && result.url.includes(targetDomain)) {
+                  if (domain && result.url.includes(domain)) {
                     try {
-                      console.log(`    🖱️ 嘗試點擊: ${result.title}`);
+                      console.log(`    Clicking: ${result.title}`);
                       
-                      const linkElements = await page.$$('#search .g a');
-                      if (linkElements[result.position - 1]) {
+                      const links = await page.$$('#search .g a');
+                      if (links[result.position - 1]) {
                         await page.evaluate((element) => {
                           element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                        }, linkElements[result.position - 1]);
+                        }, links[result.position - 1]);
                         
                         await new Promise(resolve => setTimeout(resolve, Math.random() * 3000 + 1000));
                         
-                        await linkElements[result.position - 1].click();
+                        await links[result.position - 1].click();
                         await page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 15000 });
                         
-                        await this.simulateUserBehavior(page);
+                        await this.userBehavior(page);
                         
                         results[keyword].clicked = true;
-                        console.log(`    ✅ 成功點擊: ${result.url}`);
+                        console.log(`    Clicked: ${result.url}`);
                         
                         await page.goBack();
                         await page.waitForSelector('#search', { timeout: 10000 });
                       }
                     } catch (clickError) {
-                      console.warn(`    ⚠️ 點擊失敗: ${clickError.message}`);
+                      console.warn(`    Click failed: ${clickError.message}`);
                     }
                   }
                   
@@ -403,43 +391,43 @@ jobs:
             return results;
           }
         
-          async simulateUserBehavior(page) {
-            console.log(`    👤 模擬用戶行為...`);
+          async userBehavior(page) {
+            console.log(`    Simulating user behavior...`);
             
             try {
-              const scrollTimes = Math.floor(Math.random() * 4) + 2;
-              for (let i = 0; i < scrollTimes; i++) {
-                const scrollAmount = Math.floor(Math.random() * 600) + 200;
+              const scrolls = Math.floor(Math.random() * 4) + 2;
+              for (let i = 0; i < scrolls; i++) {
+                const amount = Math.floor(Math.random() * 600) + 200;
                 await page.evaluate((amount) => {
                   window.scrollBy(0, amount);
-                }, scrollAmount);
+                }, amount);
                 await new Promise(resolve => setTimeout(resolve, Math.random() * 2000 + 800));
               }
               
-              const stayTime = Math.floor(Math.random() * 8000) + 5000;
-              console.log(`    ⏰ 停留 ${Math.round(stayTime/1000)} 秒`);
-              await new Promise(resolve => setTimeout(resolve, stayTime));
+              const stay = Math.floor(Math.random() * 8000) + 5000;
+              console.log(`    Staying ${Math.round(stay/1000)} seconds`);
+              await new Promise(resolve => setTimeout(resolve, stay));
               
             } catch (error) {
-              console.warn(`    ⚠️ 模擬行為出錯: ${error.message}`);
+              console.warn(`    Behavior error: ${error.message}`);
             }
           }
         
-          async humanScroll(page) {
-            const scrollTimes = Math.floor(Math.random() * 2) + 1;
-            for (let i = 0; i < scrollTimes; i++) {
-              const scrollAmount = Math.floor(Math.random() * 400) + 200;
+          async scroll(page) {
+            const scrolls = Math.floor(Math.random() * 2) + 1;
+            for (let i = 0; i < scrolls; i++) {
+              const amount = Math.floor(Math.random() * 400) + 200;
               await page.evaluate((amount) => {
                 window.scrollBy(0, amount);
-              }, scrollAmount);
+              }, amount);
               await new Promise(resolve => setTimeout(resolve, Math.random() * 1500 + 500));
             }
           }
         
-          async checkForCaptcha(page) {
+          async checkCaptcha(page) {
             try {
-              const captchaSelectors = ['#captcha-form', '.g-recaptcha'];
-              for (const selector of captchaSelectors) {
+              const selectors = ['#captcha-form', '.g-recaptcha'];
+              for (const selector of selectors) {
                 if (await page.$(selector)) return true;
               }
               const title = await page.title();
@@ -449,14 +437,14 @@ jobs:
             }
           }
         
-          async goToNextPage(page) {
+          async nextPage(page) {
             try {
-              const nextButton = await page.$('#pnnext');
-              if (!nextButton) return false;
+              const next = await page.$('#pnnext');
+              if (!next) return false;
         
               await Promise.all([
                 page.waitForNavigation({ waitUntil: 'domcontentloaded' }),
-                nextButton.click()
+                next.click()
               ]);
         
               await new Promise(resolve => setTimeout(resolve, Math.random() * 3000 + 2000));
@@ -469,7 +457,7 @@ jobs:
           async saveResults() {
             const timestamp = new Date().toISOString();
             
-            const detailedResults = {
+            const data = {
               timestamp: timestamp,
               duration: new Date() - this.startTime,
               totalSearches: this.results.length,
@@ -477,14 +465,14 @@ jobs:
               results: this.results
             };
             
-            await fs.writeFile('results/latest.json', JSON.stringify(detailedResults, null, 2));
-            await this.generateReport(detailedResults);
+            await fs.writeFile('results/latest.json', JSON.stringify(data, null, 2));
+            await this.generateReport(data);
             
             await fs.mkdir('docs/results', { recursive: true });
             await fs.mkdir('docs/reports', { recursive: true });
-            await fs.writeFile('docs/results/latest.json', JSON.stringify(detailedResults, null, 2));
+            await fs.writeFile('docs/results/latest.json', JSON.stringify(data, null, 2));
             
-            console.log(`💾 結果已保存`);
+            console.log('Results saved');
           }
         
           async generateReport(data) {
@@ -492,7 +480,7 @@ jobs:
         <html lang="zh-TW">
         <head>
             <meta charset="UTF-8">
-            <title>真實 Google 搜索報告</title>
+            <title>Google Search Report</title>
             <style>
                 body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
                 .container { max-width: 1000px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; }
@@ -512,50 +500,50 @@ jobs:
         <body>
             <div class="container">
                 <div class="header">
-                    <h1>🔍 真實 Google 搜索報告</h1>
-                    <p>生成時間: ${new Date(data.timestamp).toLocaleString('zh-TW')}</p>
-                    <p>⚠️ 此報告記錄真實的 Google 搜索和點擊行為</p>
+                    <h1>Google Search Report</h1>
+                    <p>Generated: ${new Date(data.timestamp).toLocaleString('zh-TW')}</p>
+                    <p>Real Google search and click behavior</p>
                 </div>
                 
                 <div class="stats">
-                    <div class="stat"><h3>${data.totalSearches}</h3><p>總搜索次數</p></div>
-                    <div class="stat"><h3>${data.successfulSearches}</h3><p>成功搜索</p></div>
-                    <div class="stat"><h3>${data.totalSearches > 0 ? Math.round((data.successfulSearches / data.totalSearches) * 100) : 0}%</h3><p>成功率</p></div>
-                    <div class="stat"><h3>${Math.round(data.duration / 1000)}s</h3><p>執行時間</p></div>
+                    <div class="stat"><h3>${data.totalSearches}</h3><p>Total Searches</p></div>
+                    <div class="stat"><h3>${data.successfulSearches}</h3><p>Successful</p></div>
+                    <div class="stat"><h3>${data.totalSearches > 0 ? Math.round((data.successfulSearches / data.totalSearches) * 100) : 0}%</h3><p>Success Rate</p></div>
+                    <div class="stat"><h3>${Math.round(data.duration / 1000)}s</h3><p>Duration</p></div>
                 </div>
                 
-                <h2>🔍 詳細搜索結果</h2>
+                <h2>Search Results</h2>
                 
                 ${data.results.map(result => {
                   if (!result.success) {
-                    return `<div class="result failed"><h3>❌ ${result.searchQuery}</h3><p><strong>錯誤:</strong> ${result.error}</p></div>`;
+                    return `<div class="result failed"><h3>❌ ${result.query}</h3><p><strong>Error:</strong> ${result.error}</p></div>`;
                   }
                   
                   return `<div class="result success">
-                    <h3>✅ ${result.searchQuery}</h3>
-                    <p><strong>搜索時間:</strong> ${new Date(result.timestamp).toLocaleString('zh-TW')}</p>
-                    <p><strong>目標網域:</strong> ${result.targetDomain || '未指定'}</p>
-                    ${result.targetKeywords.map(keyword => {
+                    <h3>✅ ${result.query}</h3>
+                    <p><strong>Time:</strong> ${new Date(result.timestamp).toLocaleString('zh-TW')}</p>
+                    <p><strong>Domain:</strong> ${result.domain || 'Not specified'}</p>
+                    ${result.keywords.map(keyword => {
                       const keywordResult = result.results[keyword];
                       return `<div class="keyword-result">
                         <h4>${keyword}</h4>
                         ${keywordResult.found ? `
-                          <p class="found">✅ 找到 - 第 ${keywordResult.page} 頁第 ${keywordResult.position} 位</p>
+                          <p class="found">✅ Found - Page ${keywordResult.page} Position ${keywordResult.position}</p>
                           <p><a href="${keywordResult.url}" target="_blank">${keywordResult.title}</a></p>
                           <p>${keywordResult.snippet}</p>
                           ${keywordResult.clicked ? 
-                            '<p class="clicked">🖱️ 已點擊訪問 (將在 GSC 中顯示點擊)</p>' : 
-                            '<p>👁️ 僅曝光 (將在 GSC 中顯示曝光)</p>'
+                            '<p class="clicked">🖱️ Clicked (will show in GSC)</p>' : 
+                            '<p>👁️ Impression only (will show in GSC)</p>'
                           }
-                        ` : '<p class="not-found">❌ 未找到</p>'}
+                        ` : '<p class="not-found">❌ Not found</p>'}
                       </div>`;
                     }).join('')}
                   </div>`;
                 }).join('')}
                 
                 <div style="text-align: center; margin-top: 40px; padding: 20px; background: #fff3cd; border-radius: 8px;">
-                    <h3>📊 Google Search Console 影響</h3>
-                    <p>此次搜索將在您的 Google Search Console 中產生真實數據</p>
+                    <h3>Google Search Console Impact</h3>
+                    <p>This search will generate real data in your Google Search Console</p>
                 </div>
             </div>
         </body>
@@ -566,7 +554,7 @@ jobs:
           }
         }
         
-        const bot = new GoogleSearchBot();
+        const bot = new SearchBot();
         bot.run();
         EOF
         
@@ -578,7 +566,7 @@ jobs:
         MAX_PAGES: ${{ github.event.inputs.max_pages || '5' }}
         TARGET_DOMAIN: ${{ github.event.inputs.target_domain }}
     
-    - name: 📤 提交結果
+    - name: Commit Results
       if: success()
       run: |
         git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -587,24 +575,18 @@ jobs:
         git add results/ reports/ docs/
         
         if ! git diff --staged --quiet; then
-          git commit -m "🔍 真實搜索結果 - $(date '+%Y-%m-%d %H:%M:%S')
-
-🤖 自動執行 | 👤 ${{ github.actor }} | 🔢 #${{ github.run_number }}
-📊 模式: ${{ github.event.inputs.search_mode || 'csv' }}
-🌐 目標: ${{ github.event.inputs.target_domain || '從CSV讀取' }}"
+          git commit -m "Search results - $(date '+%Y-%m-%d %H:%M:%S')"
           git push
-          echo "✅ 結果已提交"
+          echo "Results committed"
         fi
     
-    - name: 📊 執行摘要
+    - name: Summary
       if: success()
       run: |
-        echo "## 🎉 真實 Google 搜索完成！" >> $GITHUB_STEP_SUMMARY
+        echo "## Google Search Completed!" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
-        echo "### ⚠️ 重要說明" >> $GITHUB_STEP_SUMMARY
-        echo "此次執行了**真實的 Google 搜索和點擊**，將在 GSC 中產生真實數據" >> $GITHUB_STEP_SUMMARY
+        echo "Real Google search executed - will generate GSC data" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
-        echo "### 🔗 查看結果" >> $GITHUB_STEP_SUMMARY
-        echo "- 🌐 [在線查看](https://acejou27.github.io/gsc-keyword-search/)" >> $GITHUB_STEP_SUMMARY
-        echo "- 📊 [詳細報告](https://acejou27.github.io/gsc-keyword-search/reports/latest-report.html)" >> $GITHUB_STEP_SUMMARY
-        echo "- 📈 [Google Search Console](https://search.google.com/search-console)" >> $GITHUB_STEP_SUMMARY
+        echo "- [View Results](https://acejou27.github.io/gsc-keyword-search/)" >> $GITHUB_STEP_SUMMARY
+        echo "- [Detailed Report](https://acejou27.github.io/gsc-keyword-search/reports/latest-report.html)" >> $GITHUB_STEP_SUMMARY
+        echo "- [Google Search Console](https://search.google.com/search-console)" >> $GITHUB_STEP_SUMMARY
