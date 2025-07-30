@@ -9,8 +9,8 @@ on:
         default: 'csv'
         type: choice
         options:
-        - csv
-        - manual
+          - csv
+          - manual
       search_query:
         description: '搜索詞 (手動模式)'
         required: false
@@ -25,15 +25,20 @@ on:
         default: '5'
         type: choice
         options:
-        - '3'
-        - '5'
-        - '10'
+          - '3'
+          - '5'
+          - '10'
       target_domain:
         description: '目標網域 (要點擊的網站)'
         required: false
         default: 'docs.djangoproject.com'
+  
+  # 隨機執行時間：24小時內執行2-3次
   schedule:
-    - cron: '0 */6 * * *'  # 每6小時執行一次
+    - cron: '15 3 * * *'   # 每天 03:15 (隨機時間1)
+    - cron: '42 11 * * *'  # 每天 11:42 (隨機時間2)  
+    - cron: '28 19 * * *'  # 每天 19:28 (隨機時間3)
+  
   push:
     paths:
       - 'keywords.csv'
@@ -42,8 +47,33 @@ permissions:
   contents: write
 
 jobs:
-  search:
+  # 隨機決定是否執行 (66% 機率執行，實現平均每天2-3次)
+  random-check:
     runs-on: ubuntu-latest
+    outputs:
+      should_run: ${{ steps.random.outputs.should_run }}
+    steps:
+      - name: 🎲 隨機決定是否執行
+        id: random
+        run: |
+          # 生成 1-100 的隨機數
+          RANDOM_NUM=$((RANDOM % 100 + 1))
+          echo "隨機數: $RANDOM_NUM"
+          
+          # 66% 機率執行 (1-66 執行，67-100 跳過)
+          if [ $RANDOM_NUM -le 66 ]; then
+            echo "should_run=true" >> $GITHUB_OUTPUT
+            echo "✅ 決定執行搜索 (隨機數: $RANDOM_NUM <= 66)"
+          else
+            echo "should_run=false" >> $GITHUB_OUTPUT
+            echo "⏭️ 跳過此次執行 (隨機數: $RANDOM_NUM > 66)"
+          fi
+
+  search:
+    needs: random-check
+    runs-on: ubuntu-latest
+    # 只有在隨機檢查通過或手動觸發時才執行
+    if: needs.random-check.outputs.should_run == 'true' || github.event_name == 'workflow_dispatch' || github.event_name == 'push'
     
     steps:
     - name: 📥 檢出代碼
@@ -54,27 +84,34 @@ jobs:
       with:
         node-version: '18'
     
-    - name: 📦 安裝 Puppeteer
+    - name: 📦 安裝依賴
       run: |
         npm init -y
         npm install puppeteer csv-parser
         
-        # 安裝中文字體支援
+        # 安裝瀏覽器依賴
         sudo apt-get update
-        sudo apt-get install -y fonts-noto-cjk fonts-liberation
+        sudo apt-get install -y fonts-noto-cjk
     
     - name: 📁 創建目錄
       run: |
         mkdir -p results reports docs/results docs/reports
     
+    - name: ⏰ 隨機延遲開始
+      run: |
+        # 隨機延遲 0-300 秒 (0-5分鐘)，避免同時執行
+        DELAY=$((RANDOM % 300))
+        echo "⏰ 隨機延遲 $DELAY 秒後開始執行..."
+        sleep $DELAY
+    
     - name: 🔍 執行真實 Google 搜索
       run: |
-        cat > real-search.js << 'EOF'
+        cat > search.js << 'EOF'
         const puppeteer = require('puppeteer');
         const fs = require('fs').promises;
         const csv = require('csv-parser');
         
-        class RealGoogleSearch {
+        class GoogleSearchBot {
           constructor() {
             this.results = [];
             this.startTime = new Date();
@@ -88,9 +125,11 @@ jobs:
               console.log('📋 搜索參數:', searchParams);
               
               for (const params of searchParams) {
-                await this.executeRealSearch(params);
-                // 隨機延遲避免被檢測
-                await this.randomDelay(5000, 15000);
+                await this.executeSearch(params);
+                // 搜索間隔隨機延遲 30-120 秒
+                const delay = Math.floor(Math.random() * 90000) + 30000;
+                console.log(`⏰ 等待 ${Math.round(delay/1000)} 秒後執行下一個搜索...`);
+                await new Promise(resolve => setTimeout(resolve, delay));
               }
               
               await this.saveResults();
@@ -105,7 +144,6 @@ jobs:
           async getSearchParameters() {
             const params = [];
             
-            // 從環境變量獲取參數（手動觸發）
             if (process.env.SEARCH_MODE === 'manual' && process.env.SEARCH_QUERY) {
               params.push({
                 searchQuery: process.env.SEARCH_QUERY,
@@ -114,17 +152,19 @@ jobs:
                 maxPages: parseInt(process.env.MAX_PAGES) || 5
               });
             } else {
-              // 從 CSV 文件讀取參數
               try {
                 const csvData = await this.readCSVFile('keywords.csv');
-                params.push(...csvData);
+                // 隨機選擇 1-3 個關鍵字組合，避免一次處理太多
+                const shuffled = csvData.sort(() => 0.5 - Math.random());
+                const selected = shuffled.slice(0, Math.floor(Math.random() * 3) + 1);
+                params.push(...selected);
               } catch (error) {
                 console.warn('⚠️ 無法讀取 CSV 文件，使用默認參數');
                 params.push({
                   searchQuery: 'Python 教學',
                   targetKeywords: ['Django'],
-                  targetDomain: 'docs.djangoproject.com',
-                  maxPages: 5
+                  targetDomain: process.env.TARGET_DOMAIN || '',
+                  maxPages: 3
                 });
               }
             }
@@ -136,7 +176,7 @@ jobs:
             const results = [];
             
             return new Promise((resolve, reject) => {
-              const stream = require('fs').createReadStream(filePath)
+              require('fs').createReadStream(filePath)
                 .pipe(csv({ headers: false }))
                 .on('data', (row) => {
                   const values = Object.values(row).filter(v => v && v.trim());
@@ -149,7 +189,7 @@ jobs:
                         searchQuery: searchQuery.trim(),
                         targetKeywords: [targetKeyword.trim()],
                         targetDomain: process.env.TARGET_DOMAIN || '',
-                        maxPages: 5
+                        maxPages: Math.floor(Math.random() * 3) + 3 // 3-5 頁隨機
                       });
                     });
                   }
@@ -159,8 +199,8 @@ jobs:
             });
           }
         
-          async executeRealSearch({ searchQuery, targetKeywords, targetDomain, maxPages }) {
-            console.log(`🔍 真實搜索: "${searchQuery}" -> [${targetKeywords.join(', ')}]`);
+          async executeSearch({ searchQuery, targetKeywords, targetDomain, maxPages }) {
+            console.log(`🔍 搜索: "${searchQuery}" -> [${targetKeywords.join(', ')}]`);
             
             let browser;
             try {
@@ -174,7 +214,8 @@ jobs:
                   '--no-first-run',
                   '--disable-extensions',
                   '--disable-plugins',
-                  '--disable-images', // 加快載入速度
+                  '--disable-images',
+                  '--disable-javascript',
                   '--user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
                 ]
               });
@@ -182,7 +223,7 @@ jobs:
               const page = await browser.newPage();
               await this.setupPage(page);
               
-              const searchResults = await this.performRealSearch(page, searchQuery, targetKeywords, targetDomain, maxPages);
+              const searchResults = await this.performSearch(page, searchQuery, targetKeywords, targetDomain, maxPages);
               
               this.results.push({
                 searchQuery,
@@ -214,18 +255,15 @@ jobs:
           }
         
           async setupPage(page) {
-            // 設置視窗大小
             await page.setViewport({ 
-              width: 1366 + Math.floor(Math.random() * 100), 
-              height: 768 + Math.floor(Math.random() * 100) 
+              width: 1366 + Math.floor(Math.random() * 200), 
+              height: 768 + Math.floor(Math.random() * 200) 
             });
             
-            // 設置語言和地區
             await page.setExtraHTTPHeaders({
               'Accept-Language': 'zh-TW,zh;q=0.9,en;q=0.8'
             });
             
-            // 隱藏自動化特徵
             await page.evaluateOnNewDocument(() => {
               Object.defineProperty(navigator, 'webdriver', {
                 get: () => undefined,
@@ -233,63 +271,52 @@ jobs:
             });
           }
         
-          async performRealSearch(page, searchQuery, targetKeywords, targetDomain, maxPages) {
+          async performSearch(page, searchQuery, targetKeywords, targetDomain, maxPages) {
             const results = {};
             
-            // 初始化結果
             targetKeywords.forEach(keyword => {
               results[keyword] = { found: false, clicked: false };
             });
         
             try {
-              // 訪問 Google 搜索
               const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(searchQuery)}&hl=zh-TW&gl=TW`;
               console.log(`  🌐 訪問: ${searchUrl}`);
               
               await page.goto(searchUrl, { 
-                waitUntil: 'networkidle2',
+                waitUntil: 'domcontentloaded',
                 timeout: 30000 
               });
         
-              // 檢查是否有驗證碼或被封鎖
               if (await this.checkForCaptcha(page)) {
-                throw new Error('遇到 Google 驗證碼或反爬蟲機制');
+                throw new Error('遇到 Google 驗證碼');
               }
         
-              // 搜索多頁
               for (let currentPage = 1; currentPage <= maxPages; currentPage++) {
                 console.log(`  📄 搜索第 ${currentPage} 頁`);
                 
                 try {
                   await page.waitForSelector('#search', { timeout: 10000 });
                   
-                  // 模擬人類滾動行為
-                  await this.humanLikeScroll(page);
+                  await this.humanScroll(page);
                   
-                  // 搜索關鍵字並點擊
-                  const pageResults = await this.searchAndClickOnPage(page, targetKeywords, targetDomain, currentPage);
+                  const pageResults = await this.searchOnPage(page, targetKeywords, targetDomain, currentPage);
                   
-                  // 更新結果
                   Object.keys(pageResults).forEach(keyword => {
                     if (pageResults[keyword].found && !results[keyword].found) {
                       results[keyword] = pageResults[keyword];
                     }
                   });
         
-                  // 檢查是否都找到並點擊了
-                  const allProcessed = targetKeywords.every(keyword => 
-                    results[keyword].found && (results[keyword].clicked || !targetDomain)
-                  );
-                  if (allProcessed) break;
+                  const allFound = targetKeywords.every(keyword => results[keyword].found);
+                  if (allFound) break;
         
-                  // 下一頁
                   if (currentPage < maxPages) {
                     const hasNext = await this.goToNextPage(page);
                     if (!hasNext) break;
                   }
                   
                 } catch (error) {
-                  console.warn(`  ⚠️ 第 ${currentPage} 頁搜索出錯:`, error.message);
+                  console.warn(`  ⚠️ 第 ${currentPage} 頁出錯:`, error.message);
                   break;
                 }
               }
@@ -302,10 +329,9 @@ jobs:
             return results;
           }
         
-          async searchAndClickOnPage(page, targetKeywords, targetDomain, pageNumber) {
+          async searchOnPage(page, targetKeywords, targetDomain, pageNumber) {
             const results = {};
             
-            // 獲取所有搜索結果
             const searchResults = await page.$$eval('#search .g', (elements) => {
               return elements.map((el, index) => {
                 const titleEl = el.querySelector('h3');
@@ -316,8 +342,7 @@ jobs:
                   position: index + 1,
                   title: titleEl ? titleEl.textContent : '',
                   url: linkEl ? linkEl.href : '',
-                  snippet: snippetEl ? snippetEl.textContent : '',
-                  element: index // 用於後續點擊
+                  snippet: snippetEl ? snippetEl.textContent : ''
                 };
               });
             });
@@ -342,37 +367,28 @@ jobs:
                   
                   console.log(`    ✅ 找到 "${keyword}" 在第 ${pageNumber} 頁第 ${result.position} 位`);
                   
-                  // 如果指定了目標網域，嘗試點擊
                   if (targetDomain && result.url.includes(targetDomain)) {
                     try {
                       console.log(`    🖱️ 嘗試點擊: ${result.title}`);
                       
-                      // 找到對應的元素並點擊
                       const linkElements = await page.$$('#search .g a');
-                      if (linkElements[result.element]) {
-                        // 滾動到元素位置
+                      if (linkElements[result.position - 1]) {
                         await page.evaluate((element) => {
                           element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                        }, linkElements[result.element]);
+                        }, linkElements[result.position - 1]);
                         
-                        await this.randomDelay(1000, 3000);
+                        await new Promise(resolve => setTimeout(resolve, Math.random() * 3000 + 1000));
                         
-                        // 點擊鏈接
-                        await linkElements[result.element].click();
+                        await linkElements[result.position - 1].click();
+                        await page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 15000 });
                         
-                        // 等待頁面載入
-                        await page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 15000 });
-                        
-                        // 在目標頁面停留一段時間
                         await this.simulateUserBehavior(page);
                         
                         results[keyword].clicked = true;
-                        console.log(`    ✅ 成功點擊並訪問: ${result.url}`);
+                        console.log(`    ✅ 成功點擊: ${result.url}`);
                         
-                        // 返回搜索結果頁
                         await page.goBack();
                         await page.waitForSelector('#search', { timeout: 10000 });
-                        
                       }
                     } catch (clickError) {
                       console.warn(`    ⚠️ 點擊失敗: ${clickError.message}`);
@@ -391,57 +407,43 @@ jobs:
             console.log(`    👤 模擬用戶行為...`);
             
             try {
-              // 隨機滾動頁面
-              const scrollTimes = Math.floor(Math.random() * 5) + 2;
+              const scrollTimes = Math.floor(Math.random() * 4) + 2;
               for (let i = 0; i < scrollTimes; i++) {
-                const scrollAmount = Math.floor(Math.random() * 800) + 200;
+                const scrollAmount = Math.floor(Math.random() * 600) + 200;
                 await page.evaluate((amount) => {
                   window.scrollBy(0, amount);
                 }, scrollAmount);
-                await this.randomDelay(800, 2000);
+                await new Promise(resolve => setTimeout(resolve, Math.random() * 2000 + 800));
               }
               
-              // 停留時間
-              const stayTime = Math.floor(Math.random() * 10000) + 5000; // 5-15秒
+              const stayTime = Math.floor(Math.random() * 8000) + 5000;
               console.log(`    ⏰ 停留 ${Math.round(stayTime/1000)} 秒`);
-              await this.randomDelay(stayTime, stayTime + 2000);
+              await new Promise(resolve => setTimeout(resolve, stayTime));
               
             } catch (error) {
-              console.warn(`    ⚠️ 模擬用戶行為時出錯: ${error.message}`);
+              console.warn(`    ⚠️ 模擬行為出錯: ${error.message}`);
             }
           }
         
-          async humanLikeScroll(page) {
-            // 模擬人類滾動行為
-            const scrollTimes = Math.floor(Math.random() * 3) + 1;
+          async humanScroll(page) {
+            const scrollTimes = Math.floor(Math.random() * 2) + 1;
             for (let i = 0; i < scrollTimes; i++) {
-              const scrollAmount = Math.floor(Math.random() * 500) + 200;
+              const scrollAmount = Math.floor(Math.random() * 400) + 200;
               await page.evaluate((amount) => {
                 window.scrollBy(0, amount);
               }, scrollAmount);
-              await this.randomDelay(500, 1500);
+              await new Promise(resolve => setTimeout(resolve, Math.random() * 1500 + 500));
             }
           }
         
           async checkForCaptcha(page) {
             try {
-              const captchaSelectors = [
-                '#captcha-form',
-                '.g-recaptcha',
-                'iframe[src*="recaptcha"]'
-              ];
-        
+              const captchaSelectors = ['#captcha-form', '.g-recaptcha'];
               for (const selector of captchaSelectors) {
-                const element = await page.$(selector);
-                if (element) return true;
+                if (await page.$(selector)) return true;
               }
-        
               const title = await page.title();
-              if (title.includes('驗證') || title.includes('unusual traffic')) {
-                return true;
-              }
-        
-              return false;
+              return title.includes('驗證') || title.includes('unusual traffic');
             } catch (error) {
               return false;
             }
@@ -453,20 +455,15 @@ jobs:
               if (!nextButton) return false;
         
               await Promise.all([
-                page.waitForNavigation({ waitUntil: 'networkidle2' }),
+                page.waitForNavigation({ waitUntil: 'domcontentloaded' }),
                 nextButton.click()
               ]);
         
-              await this.randomDelay(2000, 5000);
+              await new Promise(resolve => setTimeout(resolve, Math.random() * 3000 + 2000));
               return true;
             } catch (error) {
               return false;
             }
-          }
-        
-          async randomDelay(min, max) {
-            const delay = Math.floor(Math.random() * (max - min + 1)) + min;
-            await new Promise(resolve => setTimeout(resolve, delay));
           }
         
           async saveResults() {
@@ -480,13 +477,9 @@ jobs:
               results: this.results
             };
             
-            // 保存詳細結果
             await fs.writeFile('results/latest.json', JSON.stringify(detailedResults, null, 2));
+            await this.generateReport(detailedResults);
             
-            // 生成 HTML 報告
-            await this.generateHTMLReport(detailedResults);
-            
-            // 複製到 docs 目錄
             await fs.mkdir('docs/results', { recursive: true });
             await fs.mkdir('docs/reports', { recursive: true });
             await fs.writeFile('docs/results/latest.json', JSON.stringify(detailedResults, null, 2));
@@ -494,13 +487,11 @@ jobs:
             console.log(`💾 結果已保存`);
           }
         
-          async generateHTMLReport(data) {
-            const html = `
-        <!DOCTYPE html>
+          async generateReport(data) {
+            const html = `<!DOCTYPE html>
         <html lang="zh-TW">
         <head>
             <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>真實 Google 搜索報告</title>
             <style>
                 body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
@@ -515,7 +506,6 @@ jobs:
                 .clicked { color: #2196F3; font-weight: bold; }
                 .not-found { color: #f44336; }
                 a { color: #1976D2; text-decoration: none; }
-                a:hover { text-decoration: underline; }
                 .keyword-result { margin: 10px 0; padding: 15px; background: white; border-radius: 5px; }
             </style>
         </head>
@@ -528,81 +518,44 @@ jobs:
                 </div>
                 
                 <div class="stats">
-                    <div class="stat">
-                        <h3>${data.totalSearches}</h3>
-                        <p>總搜索次數</p>
-                    </div>
-                    <div class="stat">
-                        <h3>${data.successfulSearches}</h3>
-                        <p>成功搜索</p>
-                    </div>
-                    <div class="stat">
-                        <h3>${data.totalSearches > 0 ? Math.round((data.successfulSearches / data.totalSearches) * 100) : 0}%</h3>
-                        <p>成功率</p>
-                    </div>
-                    <div class="stat">
-                        <h3>${Math.round(data.duration / 1000)}s</h3>
-                        <p>執行時間</p>
-                    </div>
+                    <div class="stat"><h3>${data.totalSearches}</h3><p>總搜索次數</p></div>
+                    <div class="stat"><h3>${data.successfulSearches}</h3><p>成功搜索</p></div>
+                    <div class="stat"><h3>${data.totalSearches > 0 ? Math.round((data.successfulSearches / data.totalSearches) * 100) : 0}%</h3><p>成功率</p></div>
+                    <div class="stat"><h3>${Math.round(data.duration / 1000)}s</h3><p>執行時間</p></div>
                 </div>
                 
                 <h2>🔍 詳細搜索結果</h2>
                 
                 ${data.results.map(result => {
                   if (!result.success) {
-                    return `
-                      <div class="result failed">
-                        <h3>❌ ${result.searchQuery}</h3>
-                        <p><strong>錯誤:</strong> ${result.error}</p>
-                        <p><strong>目標關鍵字:</strong> ${result.targetKeywords.join(', ')}</p>
-                        <p><strong>目標網域:</strong> ${result.targetDomain || '未指定'}</p>
-                      </div>
-                    `;
+                    return `<div class="result failed"><h3>❌ ${result.searchQuery}</h3><p><strong>錯誤:</strong> ${result.error}</p></div>`;
                   }
                   
-                  return `
-                    <div class="result success">
-                      <h3>✅ ${result.searchQuery}</h3>
-                      <p><strong>搜索時間:</strong> ${new Date(result.timestamp).toLocaleString('zh-TW')}</p>
-                      <p><strong>目標網域:</strong> ${result.targetDomain || '未指定'}</p>
-                      
-                      ${result.targetKeywords.map(keyword => {
-                        const keywordResult = result.results[keyword];
-                        return `
-                          <div class="keyword-result">
-                            <h4>${keyword}</h4>
-                            ${keywordResult.found ? `
-                              <p class="found">✅ 找到 - 第 ${keywordResult.page} 頁第 ${keywordResult.position} 位</p>
-                              <p><a href="${keywordResult.url}" target="_blank">${keywordResult.title}</a></p>
-                              <p>${keywordResult.snippet}</p>
-                              ${keywordResult.clicked ? 
-                                '<p class="clicked">🖱️ 已點擊訪問 (將在 GSC 中顯示點擊)</p>' : 
-                                '<p>👁️ 僅曝光 (將在 GSC 中顯示曝光)</p>'
-                              }
-                            ` : `
-                              <p class="not-found">❌ 未找到</p>
-                            `}
-                          </div>
-                        `;
-                      }).join('')}
-                    </div>
-                  `;
+                  return `<div class="result success">
+                    <h3>✅ ${result.searchQuery}</h3>
+                    <p><strong>搜索時間:</strong> ${new Date(result.timestamp).toLocaleString('zh-TW')}</p>
+                    <p><strong>目標網域:</strong> ${result.targetDomain || '未指定'}</p>
+                    ${result.targetKeywords.map(keyword => {
+                      const keywordResult = result.results[keyword];
+                      return `<div class="keyword-result">
+                        <h4>${keyword}</h4>
+                        ${keywordResult.found ? `
+                          <p class="found">✅ 找到 - 第 ${keywordResult.page} 頁第 ${keywordResult.position} 位</p>
+                          <p><a href="${keywordResult.url}" target="_blank">${keywordResult.title}</a></p>
+                          <p>${keywordResult.snippet}</p>
+                          ${keywordResult.clicked ? 
+                            '<p class="clicked">🖱️ 已點擊訪問 (將在 GSC 中顯示點擊)</p>' : 
+                            '<p>👁️ 僅曝光 (將在 GSC 中顯示曝光)</p>'
+                          }
+                        ` : '<p class="not-found">❌ 未找到</p>'}
+                      </div>`;
+                    }).join('')}
+                  </div>`;
                 }).join('')}
                 
                 <div style="text-align: center; margin-top: 40px; padding: 20px; background: #fff3cd; border-radius: 8px;">
                     <h3>📊 Google Search Console 影響</h3>
-                    <p>此次搜索將在您的 Google Search Console 中產生：</p>
-                    <ul style="text-align: left; display: inline-block;">
-                        <li><strong>曝光數據:</strong> 所有找到的關鍵字都會增加曝光次數</li>
-                        <li><strong>點擊數據:</strong> 成功點擊的結果會增加點擊次數</li>
-                        <li><strong>CTR 影響:</strong> 點擊率 = 點擊次數 ÷ 曝光次數</li>
-                        <li><strong>排名數據:</strong> 會記錄關鍵字的平均排名位置</li>
-                    </ul>
-                </div>
-                
-                <div style="text-align: center; margin-top: 30px; color: #666;">
-                    <p>🤖 由 GitHub Actions 自動執行真實搜索</p>
-                    <p>⚠️ 請適度使用，避免觸發 Google 反爬蟲機制</p>
+                    <p>此次搜索將在您的 Google Search Console 中產生真實數據</p>
                 </div>
             </div>
         </body>
@@ -613,15 +566,11 @@ jobs:
           }
         }
         
-        // 執行搜索
-        if (require.main === module) {
-          const engine = new RealGoogleSearch();
-          engine.run();
-        }
+        const bot = new GoogleSearchBot();
+        bot.run();
         EOF
         
-        # 執行真實搜索
-        node real-search.js
+        node search.js
       env:
         SEARCH_MODE: ${{ github.event.inputs.search_mode || 'csv' }}
         SEARCH_QUERY: ${{ github.event.inputs.search_query }}
@@ -629,7 +578,7 @@ jobs:
         MAX_PAGES: ${{ github.event.inputs.max_pages || '5' }}
         TARGET_DOMAIN: ${{ github.event.inputs.target_domain }}
     
-    - name: 📤 提交結果到倉庫
+    - name: 📤 提交結果
       if: success()
       run: |
         git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -638,36 +587,24 @@ jobs:
         git add results/ reports/ docs/
         
         if ! git diff --staged --quiet; then
-          git commit -m "🔍 真實搜索結果更新 - $(date '+%Y-%m-%d %H:%M:%S')
+          git commit -m "🔍 真實搜索結果 - $(date '+%Y-%m-%d %H:%M:%S')
 
-🤖 由 GitHub Actions 自動執行真實 Google 搜索
-👤 觸發者: ${{ github.actor }}
-🔢 運行編號: ${{ github.run_number }}
-📊 搜索模式: ${{ github.event.inputs.search_mode || 'csv' }}
-🌐 目標網域: ${{ github.event.inputs.target_domain || '從CSV讀取' }}"
+🤖 自動執行 | 👤 ${{ github.actor }} | 🔢 #${{ github.run_number }}
+📊 模式: ${{ github.event.inputs.search_mode || 'csv' }}
+🌐 目標: ${{ github.event.inputs.target_domain || '從CSV讀取' }}"
           git push
-          echo "✅ 真實搜索結果已提交到倉庫"
+          echo "✅ 結果已提交"
         fi
     
-    - name: 📊 創建執行摘要
+    - name: 📊 執行摘要
       if: success()
       run: |
         echo "## 🎉 真實 Google 搜索完成！" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "### ⚠️ 重要說明" >> $GITHUB_STEP_SUMMARY
-        echo "此次執行了**真實的 Google 搜索和點擊**，將會在您的 Google Search Console 中產生真實數據：" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "- 📈 **曝光數據**: 所有找到的關鍵字都會增加曝光次數" >> $GITHUB_STEP_SUMMARY
-        echo "- 🖱️ **點擊數據**: 成功點擊的結果會增加點擊次數" >> $GITHUB_STEP_SUMMARY
-        echo "- 📊 **CTR 影響**: 會影響您網站的點擊率數據" >> $GITHUB_STEP_SUMMARY
-        echo "- 🎯 **排名數據**: 會記錄關鍵字的平均排名位置" >> $GITHUB_STEP_SUMMARY
+        echo "此次執行了**真實的 Google 搜索和點擊**，將在 GSC 中產生真實數據" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "### 🔗 查看結果" >> $GITHUB_STEP_SUMMARY
-        echo "- 🌐 [在線查看結果](https://acejou27.github.io/gsc-keyword-search/)" >> $GITHUB_STEP_SUMMARY
+        echo "- 🌐 [在線查看](https://acejou27.github.io/gsc-keyword-search/)" >> $GITHUB_STEP_SUMMARY
         echo "- 📊 [詳細報告](https://acejou27.github.io/gsc-keyword-search/reports/latest-report.html)" >> $GITHUB_STEP_SUMMARY
         echo "- 📈 [Google Search Console](https://search.google.com/search-console)" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "### 📝 建議" >> $GITHUB_STEP_SUMMARY
-        echo "- 請在 24-48 小時後檢查 Google Search Console 數據" >> $GITHUB_STEP_SUMMARY
-        echo "- 適度使用此功能，避免觸發 Google 反爬蟲機制" >> $GITHUB_STEP_SUMMARY
-        echo "- 建議設置合理的執行頻率（不超過每天2-3次）" >> $GITHUB_STEP_SUMMARY
