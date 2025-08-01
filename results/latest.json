@@ -1,7 +1,7 @@
 {
-  "timestamp": "2025-08-01T11:58:53.639Z",
-  "duration": 121559,
-  "totalSearches": 1,
+  "timestamp": "2025-08-01T19:39:01.435Z",
+  "duration": 100091,
+  "totalSearches": 2,
   "successfulSearches": 0,
   "results": [
     {
@@ -11,7 +11,17 @@
       ],
       "domain": "",
       "error": "CAPTCHA detected",
-      "timestamp": "2025-08-01T11:56:55.431Z",
+      "timestamp": "2025-08-01T19:37:22.682Z",
+      "success": false
+    },
+    {
+      "query": "關鍵字研究",
+      "keywords": [
+        "Google"
+      ],
+      "domain": "",
+      "error": "CAPTCHA detected",
+      "timestamp": "2025-08-01T19:38:11.145Z",
       "success": false
     }
   ]
