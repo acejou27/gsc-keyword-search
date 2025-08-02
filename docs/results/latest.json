@@ -1,37 +1,17 @@
 {
-  "timestamp": "2025-08-02T04:15:21.081Z",
-  "duration": 283267,
-  "totalSearches": 3,
+  "timestamp": "2025-08-02T11:59:57.249Z",
+  "duration": 96852,
+  "totalSearches": 1,
   "successfulSearches": 0,
   "results": [
     {
-      "query": "關鍵字研究",
+      "query": "SEO 優化",
       "keywords": [
         "Google"
       ],
       "domain": "",
       "error": "CAPTCHA detected",
-      "timestamp": "2025-08-02T04:10:38.945Z",
-      "success": false
-    },
-    {
-      "query": "Python 教學",
-      "keywords": [
-        "Django"
-      ],
-      "domain": "",
-      "error": "CAPTCHA detected",
-      "timestamp": "2025-08-02T04:12:09.211Z",
-      "success": false
-    },
-    {
-      "query": "AI 工具",
-      "keywords": [
-        "ChatGPT"
-      ],
-      "domain": "",
-      "error": "CAPTCHA detected",
-      "timestamp": "2025-08-02T04:13:30.900Z",
+      "timestamp": "2025-08-02T11:58:24.982Z",
       "success": false
     }
   ]
