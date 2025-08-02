@@ -1,19 +1,9 @@
 {
-  "timestamp": "2025-08-01T19:39:01.435Z",
-  "duration": 100091,
-  "totalSearches": 2,
+  "timestamp": "2025-08-02T04:15:21.081Z",
+  "duration": 283267,
+  "totalSearches": 3,
   "successfulSearches": 0,
   "results": [
-    {
-      "query": "AI 工具",
-      "keywords": [
-        "ChatGPT"
-      ],
-      "domain": "",
-      "error": "CAPTCHA detected",
-      "timestamp": "2025-08-01T19:37:22.682Z",
-      "success": false
-    },
     {
       "query": "關鍵字研究",
       "keywords": [
@@ -21,7 +11,27 @@
       ],
       "domain": "",
       "error": "CAPTCHA detected",
-      "timestamp": "2025-08-01T19:38:11.145Z",
+      "timestamp": "2025-08-02T04:10:38.945Z",
+      "success": false
+    },
+    {
+      "query": "Python 教學",
+      "keywords": [
+        "Django"
+      ],
+      "domain": "",
+      "error": "CAPTCHA detected",
+      "timestamp": "2025-08-02T04:12:09.211Z",
+      "success": false
+    },
+    {
+      "query": "AI 工具",
+      "keywords": [
+        "ChatGPT"
+      ],
+      "domain": "",
+      "error": "CAPTCHA detected",
+      "timestamp": "2025-08-02T04:13:30.900Z",
       "success": false
     }
   ]
