@@ -1,17 +1,27 @@
 {
-  "timestamp": "2025-08-03T11:57:30.371Z",
-  "duration": 63739,
-  "totalSearches": 1,
+  "timestamp": "2025-08-03T19:42:29.589Z",
+  "duration": 109385,
+  "totalSearches": 2,
   "successfulSearches": 0,
   "results": [
     {
-      "query": "關鍵字研究",
+      "query": "數位行銷",
       "keywords": [
-        "Google"
+        "Facebook"
       ],
       "domain": "",
       "error": "CAPTCHA detected",
-      "timestamp": "2025-08-03T11:56:29.279Z",
+      "timestamp": "2025-08-03T19:40:43.067Z",
+      "success": false
+    },
+    {
+      "query": "Python 教學",
+      "keywords": [
+        "Django"
+      ],
+      "domain": "",
+      "error": "CAPTCHA detected",
+      "timestamp": "2025-08-03T19:41:32.494Z",
       "success": false
     }
   ]
