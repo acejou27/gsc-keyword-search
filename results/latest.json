@@ -1,7 +1,7 @@
 {
-  "timestamp": "2025-08-05T04:29:17.735Z",
-  "duration": 116792,
-  "totalSearches": 2,
+  "timestamp": "2025-08-05T19:48:19.709Z",
+  "duration": 190586,
+  "totalSearches": 3,
   "successfulSearches": 0,
   "results": [
     {
@@ -11,7 +11,17 @@
       ],
       "domain": "",
       "error": "CAPTCHA detected",
-      "timestamp": "2025-08-05T04:27:22.013Z",
+      "timestamp": "2025-08-05T19:45:12.320Z",
+      "success": false
+    },
+    {
+      "query": "機器學習",
+      "keywords": [
+        "ChatGPT"
+      ],
+      "domain": "",
+      "error": "CAPTCHA detected",
+      "timestamp": "2025-08-05T19:45:51.511Z",
       "success": false
     },
     {
@@ -21,7 +31,7 @@
       ],
       "domain": "",
       "error": "CAPTCHA detected",
-      "timestamp": "2025-08-05T04:28:17.050Z",
+      "timestamp": "2025-08-05T19:46:24.749Z",
       "success": false
     }
   ]
