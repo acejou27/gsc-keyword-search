@@ -1,19 +1,9 @@
 {
-  "timestamp": "2025-08-04T19:49:07.208Z",
-  "duration": 259705,
-  "totalSearches": 3,
+  "timestamp": "2025-08-05T04:29:17.735Z",
+  "duration": 116792,
+  "totalSearches": 2,
   "successfulSearches": 0,
   "results": [
-    {
-      "query": "數位行銷",
-      "keywords": [
-        "Facebook"
-      ],
-      "domain": "",
-      "error": "CAPTCHA detected",
-      "timestamp": "2025-08-04T19:44:50.629Z",
-      "success": false
-    },
     {
       "query": "關鍵字研究",
       "keywords": [
@@ -21,17 +11,17 @@
       ],
       "domain": "",
       "error": "CAPTCHA detected",
-      "timestamp": "2025-08-04T19:46:50.104Z",
+      "timestamp": "2025-08-05T04:27:22.013Z",
       "success": false
     },
     {
-      "query": "機器學習",
+      "query": "SEO 優化",
       "keywords": [
-        "ChatGPT"
+        "Google"
       ],
       "domain": "",
       "error": "CAPTCHA detected",
-      "timestamp": "2025-08-04T19:48:08.896Z",
+      "timestamp": "2025-08-05T04:28:17.050Z",
       "success": false
     }
   ]
