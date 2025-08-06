@@ -1,7 +1,7 @@
 {
-  "timestamp": "2025-08-06T12:00:36.358Z",
-  "duration": 195496,
-  "totalSearches": 2,
+  "timestamp": "2025-08-06T19:44:41.320Z",
+  "duration": 47054,
+  "totalSearches": 1,
   "successfulSearches": 0,
   "results": [
     {
@@ -11,17 +11,7 @@
       ],
       "domain": "",
       "error": "CAPTCHA detected",
-      "timestamp": "2025-08-06T11:57:23.409Z",
-      "success": false
-    },
-    {
-      "query": "Python 教學",
-      "keywords": [
-        "Django"
-      ],
-      "domain": "",
-      "error": "CAPTCHA detected",
-      "timestamp": "2025-08-06T11:58:59.864Z",
+      "timestamp": "2025-08-06T19:43:56.903Z",
       "success": false
     }
   ]
