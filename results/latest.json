@@ -1,27 +1,17 @@
 {
-  "timestamp": "2025-08-09T04:10:41.109Z",
-  "duration": 233478,
+  "timestamp": "2025-08-09T12:00:39.287Z",
+  "duration": 282207,
   "totalSearches": 3,
-  "successfulSearches": 0,
+  "successfulSearches": 1,
   "results": [
     {
-      "query": "Python 教學",
+      "query": "關鍵字研究",
       "keywords": [
-        "Django"
+        "Google"
       ],
       "domain": "",
       "error": "CAPTCHA detected",
-      "timestamp": "2025-08-09T04:06:50.661Z",
-      "success": false
-    },
-    {
-      "query": "Python 入門",
-      "keywords": [
-        "Django"
-      ],
-      "domain": "",
-      "error": "CAPTCHA detected",
-      "timestamp": "2025-08-09T04:07:38.675Z",
+      "timestamp": "2025-08-09T11:56:01.616Z",
       "success": false
     },
     {
@@ -30,8 +20,23 @@
         "Facebook"
       ],
       "domain": "",
+      "results": {
+        "Facebook": {
+          "found": false,
+          "clicked": false
+        }
+      },
+      "timestamp": "2025-08-09T11:57:47.256Z",
+      "success": true
+    },
+    {
+      "query": "SEO 優化",
+      "keywords": [
+        "Google"
+      ],
+      "domain": "",
       "error": "CAPTCHA detected",
-      "timestamp": "2025-08-09T04:09:06.004Z",
+      "timestamp": "2025-08-09T11:59:38.455Z",
       "success": false
     }
   ]
