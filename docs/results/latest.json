@@ -1,24 +1,9 @@
 {
-  "timestamp": "2025-08-09T19:41:33.309Z",
-  "duration": 192670,
-  "totalSearches": 2,
-  "successfulSearches": 1,
+  "timestamp": "2025-08-10T11:57:47.643Z",
+  "duration": 81872,
+  "totalSearches": 1,
+  "successfulSearches": 0,
   "results": [
-    {
-      "query": "Python 教學",
-      "keywords": [
-        "Django"
-      ],
-      "domain": "",
-      "results": {
-        "Django": {
-          "found": false,
-          "clicked": false
-        }
-      },
-      "timestamp": "2025-08-09T19:38:39.851Z",
-      "success": true
-    },
     {
       "query": "AI 工具",
       "keywords": [
@@ -26,7 +11,7 @@
       ],
       "domain": "",
       "error": "CAPTCHA detected",
-      "timestamp": "2025-08-09T19:39:57.807Z",
+      "timestamp": "2025-08-10T11:56:29.276Z",
       "success": false
     }
   ]
