@@ -1,18 +1,23 @@
 {
-  "timestamp": "2025-08-10T11:57:47.643Z",
-  "duration": 81872,
+  "timestamp": "2025-08-11T04:24:29.375Z",
+  "duration": 113129,
   "totalSearches": 1,
-  "successfulSearches": 0,
+  "successfulSearches": 1,
   "results": [
     {
-      "query": "AI 工具",
+      "query": "關鍵字研究",
       "keywords": [
-        "ChatGPT"
+        "Google"
       ],
       "domain": "",
-      "error": "CAPTCHA detected",
-      "timestamp": "2025-08-10T11:56:29.276Z",
-      "success": false
+      "results": {
+        "Google": {
+          "found": false,
+          "clicked": false
+        }
+      },
+      "timestamp": "2025-08-11T04:23:05.235Z",
+      "success": true
     }
   ]
 }
