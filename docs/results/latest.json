@@ -1,6 +1,6 @@
 {
-  "timestamp": "2025-08-11T19:42:30.389Z",
-  "duration": 145965,
+  "timestamp": "2025-08-12T04:05:37.201Z",
+  "duration": 118337,
   "totalSearches": 2,
   "successfulSearches": 0,
   "results": [
@@ -11,17 +11,17 @@
       ],
       "domain": "",
       "error": "CAPTCHA detected",
-      "timestamp": "2025-08-11T19:40:05.448Z",
+      "timestamp": "2025-08-12T04:03:41.747Z",
       "success": false
     },
     {
-      "query": "關鍵字研究",
+      "query": "數位行銷",
       "keywords": [
-        "Google"
+        "Facebook"
       ],
       "domain": "",
       "error": "CAPTCHA detected",
-      "timestamp": "2025-08-11T19:41:07.462Z",
+      "timestamp": "2025-08-12T04:04:41.077Z",
       "success": false
     }
   ]
