@@ -1,27 +1,27 @@
 {
-  "timestamp": "2025-08-15T12:00:01.458Z",
-  "duration": 127571,
+  "timestamp": "2025-08-15T19:38:53.336Z",
+  "duration": 92023,
   "totalSearches": 2,
   "successfulSearches": 0,
   "results": [
     {
-      "query": "Python 入門",
+      "query": "SEO 優化",
       "keywords": [
-        "Django"
+        "Google"
       ],
       "domain": "",
       "error": "CAPTCHA detected",
-      "timestamp": "2025-08-15T11:57:56.777Z",
+      "timestamp": "2025-08-15T19:37:22.112Z",
       "success": false
     },
     {
-      "query": "Python 教學",
+      "query": "關鍵字研究",
       "keywords": [
-        "Django"
+        "Google"
       ],
       "domain": "",
       "error": "CAPTCHA detected",
-      "timestamp": "2025-08-15T11:59:10.548Z",
+      "timestamp": "2025-08-15T19:37:55.009Z",
       "success": false
     }
   ]
