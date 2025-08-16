@@ -1,27 +1,27 @@
 {
-  "timestamp": "2025-08-15T19:38:53.336Z",
-  "duration": 92023,
+  "timestamp": "2025-08-16T12:00:31.136Z",
+  "duration": 131718,
   "totalSearches": 2,
   "successfulSearches": 0,
   "results": [
     {
-      "query": "SEO 優化",
+      "query": "AI 工具",
       "keywords": [
-        "Google"
+        "ChatGPT"
       ],
       "domain": "",
       "error": "CAPTCHA detected",
-      "timestamp": "2025-08-15T19:37:22.112Z",
+      "timestamp": "2025-08-16T11:58:20.314Z",
       "success": false
     },
     {
-      "query": "關鍵字研究",
+      "query": "網路行銷",
       "keywords": [
-        "Google"
+        "Facebook"
       ],
       "domain": "",
       "error": "CAPTCHA detected",
-      "timestamp": "2025-08-15T19:37:55.009Z",
+      "timestamp": "2025-08-16T11:59:31.885Z",
       "success": false
     }
   ]
