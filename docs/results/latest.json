@@ -1,6 +1,6 @@
 {
-  "timestamp": "2025-08-17T04:09:37.423Z",
-  "duration": 32805,
+  "timestamp": "2025-08-17T11:56:39.945Z",
+  "duration": 98543,
   "totalSearches": 1,
   "successfulSearches": 0,
   "results": [
@@ -11,7 +11,7 @@
       ],
       "domain": "",
       "error": "CAPTCHA detected",
-      "timestamp": "2025-08-17T04:09:05.534Z",
+      "timestamp": "2025-08-17T11:55:02.639Z",
       "success": false
     }
   ]
