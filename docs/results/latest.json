@@ -1,17 +1,17 @@
 {
-  "timestamp": "2025-08-18T04:20:05.003Z",
-  "duration": 67534,
+  "timestamp": "2025-08-18T11:59:51.921Z",
+  "duration": 39967,
   "totalSearches": 1,
   "successfulSearches": 0,
   "results": [
     {
-      "query": "關鍵字研究",
+      "query": "數位行銷",
       "keywords": [
-        "Google"
+        "Facebook"
       ],
       "domain": "",
       "error": "CAPTCHA detected",
-      "timestamp": "2025-08-18T04:18:58.346Z",
+      "timestamp": "2025-08-18T11:59:12.787Z",
       "success": false
     }
   ]
