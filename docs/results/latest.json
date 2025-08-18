@@ -1,17 +1,17 @@
 {
-  "timestamp": "2025-08-18T11:59:51.921Z",
-  "duration": 39967,
+  "timestamp": "2025-08-18T19:44:05.782Z",
+  "duration": 110138,
   "totalSearches": 1,
   "successfulSearches": 0,
   "results": [
     {
-      "query": "數位行銷",
+      "query": "Python 教學",
       "keywords": [
-        "Facebook"
+        "Django"
       ],
       "domain": "",
       "error": "CAPTCHA detected",
-      "timestamp": "2025-08-18T11:59:12.787Z",
+      "timestamp": "2025-08-18T19:42:17.085Z",
       "success": false
     }
   ]
