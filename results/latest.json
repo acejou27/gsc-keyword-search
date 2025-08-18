@@ -1,17 +1,17 @@
 {
-  "timestamp": "2025-08-17T11:56:39.945Z",
-  "duration": 98543,
+  "timestamp": "2025-08-18T04:20:05.003Z",
+  "duration": 67534,
   "totalSearches": 1,
   "successfulSearches": 0,
   "results": [
     {
-      "query": "機器學習",
+      "query": "關鍵字研究",
       "keywords": [
-        "ChatGPT"
+        "Google"
       ],
       "domain": "",
       "error": "CAPTCHA detected",
-      "timestamp": "2025-08-17T11:55:02.639Z",
+      "timestamp": "2025-08-18T04:18:58.346Z",
       "success": false
     }
   ]
