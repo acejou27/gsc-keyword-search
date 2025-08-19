@@ -1,17 +1,17 @@
 {
-  "timestamp": "2025-08-18T19:44:05.782Z",
-  "duration": 110138,
+  "timestamp": "2025-08-19T04:00:32.092Z",
+  "duration": 110274,
   "totalSearches": 1,
   "successfulSearches": 0,
   "results": [
     {
-      "query": "Python 教學",
+      "query": "機器學習",
       "keywords": [
-        "Django"
+        "ChatGPT"
       ],
       "domain": "",
       "error": "CAPTCHA detected",
-      "timestamp": "2025-08-18T19:42:17.085Z",
+      "timestamp": "2025-08-19T03:58:43.110Z",
       "success": false
     }
   ]
