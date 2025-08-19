@@ -1,7 +1,7 @@
 {
-  "timestamp": "2025-08-19T12:01:06.999Z",
-  "duration": 92921,
-  "totalSearches": 2,
+  "timestamp": "2025-08-19T19:40:23.790Z",
+  "duration": 160574,
+  "totalSearches": 3,
   "successfulSearches": 0,
   "results": [
     {
@@ -11,17 +11,27 @@
       ],
       "domain": "",
       "error": "CAPTCHA detected",
-      "timestamp": "2025-08-19T11:59:34.967Z",
+      "timestamp": "2025-08-19T19:37:44.164Z",
       "success": false
     },
     {
-      "query": "Python 教學",
+      "query": "AI 工具",
       "keywords": [
-        "Django"
+        "ChatGPT"
       ],
       "domain": "",
       "error": "CAPTCHA detected",
-      "timestamp": "2025-08-19T12:00:36.659Z",
+      "timestamp": "2025-08-19T19:38:19.611Z",
+      "success": false
+    },
+    {
+      "query": "機器學習",
+      "keywords": [
+        "ChatGPT"
+      ],
+      "domain": "",
+      "error": "CAPTCHA detected",
+      "timestamp": "2025-08-19T19:39:09.940Z",
       "success": false
     }
   ]
