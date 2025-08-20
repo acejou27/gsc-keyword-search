@@ -1,6 +1,6 @@
 {
-  "timestamp": "2025-08-19T19:40:23.790Z",
-  "duration": 160574,
+  "timestamp": "2025-08-20T12:00:27.499Z",
+  "duration": 189692,
   "totalSearches": 3,
   "successfulSearches": 0,
   "results": [
@@ -11,7 +11,7 @@
       ],
       "domain": "",
       "error": "CAPTCHA detected",
-      "timestamp": "2025-08-19T19:37:44.164Z",
+      "timestamp": "2025-08-20T11:57:18.950Z",
       "success": false
     },
     {
@@ -21,17 +21,17 @@
       ],
       "domain": "",
       "error": "CAPTCHA detected",
-      "timestamp": "2025-08-19T19:38:19.611Z",
+      "timestamp": "2025-08-20T11:58:05.362Z",
       "success": false
     },
     {
-      "query": "機器學習",
+      "query": "網路行銷",
       "keywords": [
-        "ChatGPT"
+        "Facebook"
       ],
       "domain": "",
       "error": "CAPTCHA detected",
-      "timestamp": "2025-08-19T19:39:09.940Z",
+      "timestamp": "2025-08-20T11:59:09.144Z",
       "success": false
     }
   ]
