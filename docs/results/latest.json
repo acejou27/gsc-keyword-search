@@ -1,9 +1,19 @@
 {
-  "timestamp": "2025-08-20T12:00:27.499Z",
-  "duration": 189692,
-  "totalSearches": 3,
+  "timestamp": "2025-08-20T19:38:00.745Z",
+  "duration": 77765,
+  "totalSearches": 2,
   "successfulSearches": 0,
   "results": [
+    {
+      "query": "SEO 優化",
+      "keywords": [
+        "Google"
+      ],
+      "domain": "",
+      "error": "CAPTCHA detected",
+      "timestamp": "2025-08-20T19:36:44.435Z",
+      "success": false
+    },
     {
       "query": "Python 入門",
       "keywords": [
@@ -11,27 +21,7 @@
       ],
       "domain": "",
       "error": "CAPTCHA detected",
-      "timestamp": "2025-08-20T11:57:18.950Z",
-      "success": false
-    },
-    {
-      "query": "AI 工具",
-      "keywords": [
-        "ChatGPT"
-      ],
-      "domain": "",
-      "error": "CAPTCHA detected",
-      "timestamp": "2025-08-20T11:58:05.362Z",
-      "success": false
-    },
-    {
-      "query": "網路行銷",
-      "keywords": [
-        "Facebook"
-      ],
-      "domain": "",
-      "error": "CAPTCHA detected",
-      "timestamp": "2025-08-20T11:59:09.144Z",
+      "timestamp": "2025-08-20T19:37:21.201Z",
       "success": false
     }
   ]
