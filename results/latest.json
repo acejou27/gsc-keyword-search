@@ -1,27 +1,42 @@
 {
-  "timestamp": "2025-08-23T03:53:57.502Z",
-  "duration": 92844,
-  "totalSearches": 2,
-  "successfulSearches": 0,
+  "timestamp": "2025-08-23T12:00:34.100Z",
+  "duration": 234020,
+  "totalSearches": 3,
+  "successfulSearches": 1,
   "results": [
     {
-      "query": "Python 入門",
+      "query": "關鍵字研究",
       "keywords": [
-        "Django"
+        "Google"
       ],
       "domain": "",
       "error": "CAPTCHA detected",
-      "timestamp": "2025-08-23T03:52:26.027Z",
+      "timestamp": "2025-08-23T11:56:40.900Z",
       "success": false
     },
     {
-      "query": "AI 工具",
+      "query": "網路行銷",
       "keywords": [
-        "ChatGPT"
+        "Facebook"
+      ],
+      "domain": "",
+      "results": {
+        "Facebook": {
+          "found": false,
+          "clicked": false
+        }
+      },
+      "timestamp": "2025-08-23T11:58:27.522Z",
+      "success": true
+    },
+    {
+      "query": "SEO 優化",
+      "keywords": [
+        "Google"
       ],
       "domain": "",
       "error": "CAPTCHA detected",
-      "timestamp": "2025-08-23T03:53:16.131Z",
+      "timestamp": "2025-08-23T11:59:04.981Z",
       "success": false
     }
   ]
