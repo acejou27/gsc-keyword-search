@@ -1,6 +1,6 @@
 {
-  "timestamp": "2025-08-22T19:37:31.405Z",
-  "duration": 110132,
+  "timestamp": "2025-08-23T03:53:57.502Z",
+  "duration": 92844,
   "totalSearches": 2,
   "successfulSearches": 0,
   "results": [
@@ -11,17 +11,17 @@
       ],
       "domain": "",
       "error": "CAPTCHA detected",
-      "timestamp": "2025-08-22T19:35:42.580Z",
+      "timestamp": "2025-08-23T03:52:26.027Z",
       "success": false
     },
     {
-      "query": "SEO 優化",
+      "query": "AI 工具",
       "keywords": [
-        "Google"
+        "ChatGPT"
       ],
       "domain": "",
       "error": "CAPTCHA detected",
-      "timestamp": "2025-08-22T19:36:51.838Z",
+      "timestamp": "2025-08-23T03:53:16.131Z",
       "success": false
     }
   ]
