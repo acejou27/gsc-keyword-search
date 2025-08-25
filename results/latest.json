@@ -1,9 +1,19 @@
 {
-  "timestamp": "2025-08-25T11:58:27.371Z",
-  "duration": 41552,
-  "totalSearches": 1,
+  "timestamp": "2025-08-25T19:41:09.052Z",
+  "duration": 186982,
+  "totalSearches": 2,
   "successfulSearches": 0,
   "results": [
+    {
+      "query": "Python 教學",
+      "keywords": [
+        "Django"
+      ],
+      "domain": "",
+      "error": "CAPTCHA detected",
+      "timestamp": "2025-08-25T19:38:03.112Z",
+      "success": false
+    },
     {
       "query": "SEO 優化",
       "keywords": [
@@ -11,7 +21,7 @@
       ],
       "domain": "",
       "error": "CAPTCHA detected",
-      "timestamp": "2025-08-25T11:57:46.957Z",
+      "timestamp": "2025-08-25T19:39:32.779Z",
       "success": false
     }
   ]
