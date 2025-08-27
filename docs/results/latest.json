@@ -1,27 +1,17 @@
 {
-  "timestamp": "2025-08-26T19:40:17.940Z",
-  "duration": 170879,
-  "totalSearches": 2,
+  "timestamp": "2025-08-27T03:56:51.976Z",
+  "duration": 116937,
+  "totalSearches": 1,
   "successfulSearches": 0,
   "results": [
     {
-      "query": "Python 入門",
+      "query": "網路行銷",
       "keywords": [
-        "Django"
+        "Facebook"
       ],
       "domain": "",
       "error": "CAPTCHA detected",
-      "timestamp": "2025-08-26T19:37:27.943Z",
-      "success": false
-    },
-    {
-      "query": "關鍵字研究",
-      "keywords": [
-        "Google"
-      ],
-      "domain": "",
-      "error": "CAPTCHA detected",
-      "timestamp": "2025-08-26T19:39:19.676Z",
+      "timestamp": "2025-08-27T03:54:55.995Z",
       "success": false
     }
   ]
