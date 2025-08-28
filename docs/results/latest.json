@@ -1,27 +1,27 @@
 {
-  "timestamp": "2025-08-28T03:53:29.979Z",
-  "duration": 149605,
+  "timestamp": "2025-08-28T11:59:29.913Z",
+  "duration": 157333,
   "totalSearches": 2,
   "successfulSearches": 0,
   "results": [
     {
-      "query": "AI 工具",
+      "query": "Python 入門",
       "keywords": [
-        "ChatGPT"
+        "Django"
       ],
       "domain": "",
       "error": "CAPTCHA detected",
-      "timestamp": "2025-08-28T03:51:01.619Z",
+      "timestamp": "2025-08-28T11:56:53.751Z",
       "success": false
     },
     {
-      "query": "機器學習",
+      "query": "SEO 優化",
       "keywords": [
-        "ChatGPT"
+        "Google"
       ],
       "domain": "",
       "error": "CAPTCHA detected",
-      "timestamp": "2025-08-28T03:52:33.918Z",
+      "timestamp": "2025-08-28T11:58:20.922Z",
       "success": false
     }
   ]
