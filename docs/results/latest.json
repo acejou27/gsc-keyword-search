@@ -1,6 +1,6 @@
 {
-  "timestamp": "2025-08-28T11:59:29.913Z",
-  "duration": 157333,
+  "timestamp": "2025-08-28T19:38:56.094Z",
+  "duration": 142213,
   "totalSearches": 2,
   "successfulSearches": 0,
   "results": [
@@ -11,17 +11,17 @@
       ],
       "domain": "",
       "error": "CAPTCHA detected",
-      "timestamp": "2025-08-28T11:56:53.751Z",
+      "timestamp": "2025-08-28T19:36:35.607Z",
       "success": false
     },
     {
-      "query": "SEO 優化",
+      "query": "關鍵字研究",
       "keywords": [
         "Google"
       ],
       "domain": "",
       "error": "CAPTCHA detected",
-      "timestamp": "2025-08-28T11:58:20.922Z",
+      "timestamp": "2025-08-28T19:37:45.246Z",
       "success": false
     }
   ]
