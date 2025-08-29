@@ -1,17 +1,17 @@
 {
-  "timestamp": "2025-08-28T19:38:56.094Z",
-  "duration": 142213,
+  "timestamp": "2025-08-29T03:56:01.076Z",
+  "duration": 140122,
   "totalSearches": 2,
   "successfulSearches": 0,
   "results": [
     {
-      "query": "Python 入門",
+      "query": "數位行銷",
       "keywords": [
-        "Django"
+        "Facebook"
       ],
       "domain": "",
       "error": "CAPTCHA detected",
-      "timestamp": "2025-08-28T19:36:35.607Z",
+      "timestamp": "2025-08-29T03:53:42.151Z",
       "success": false
     },
     {
@@ -21,7 +21,7 @@
       ],
       "domain": "",
       "error": "CAPTCHA detected",
-      "timestamp": "2025-08-28T19:37:45.246Z",
+      "timestamp": "2025-08-29T03:54:13.665Z",
       "success": false
     }
   ]
