@@ -1,27 +1,27 @@
 {
-  "timestamp": "2025-08-29T03:56:01.076Z",
-  "duration": 140122,
+  "timestamp": "2025-08-29T11:58:12.629Z",
+  "duration": 192433,
   "totalSearches": 2,
   "successfulSearches": 0,
   "results": [
     {
-      "query": "數位行銷",
+      "query": "Python 入門",
       "keywords": [
-        "Facebook"
+        "Django"
       ],
       "domain": "",
       "error": "CAPTCHA detected",
-      "timestamp": "2025-08-29T03:53:42.151Z",
+      "timestamp": "2025-08-29T11:55:01.469Z",
       "success": false
     },
     {
-      "query": "關鍵字研究",
+      "query": "機器學習",
       "keywords": [
-        "Google"
+        "ChatGPT"
       ],
       "domain": "",
       "error": "CAPTCHA detected",
-      "timestamp": "2025-08-29T03:54:13.665Z",
+      "timestamp": "2025-08-29T11:56:52.079Z",
       "success": false
     }
   ]
