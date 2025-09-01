@@ -1,7 +1,7 @@
 {
-  "timestamp": "2025-09-01T04:10:03.538Z",
-  "duration": 57384,
-  "totalSearches": 1,
+  "timestamp": "2025-09-01T12:01:46.421Z",
+  "duration": 223479,
+  "totalSearches": 3,
   "successfulSearches": 0,
   "results": [
     {
@@ -11,7 +11,27 @@
       ],
       "domain": "",
       "error": "CAPTCHA detected",
-      "timestamp": "2025-09-01T04:09:07.696Z",
+      "timestamp": "2025-09-01T11:58:03.831Z",
+      "success": false
+    },
+    {
+      "query": "Python 教學",
+      "keywords": [
+        "Django"
+      ],
+      "domain": "",
+      "error": "CAPTCHA detected",
+      "timestamp": "2025-09-01T11:59:35.368Z",
+      "success": false
+    },
+    {
+      "query": "網路行銷",
+      "keywords": [
+        "Facebook"
+      ],
+      "domain": "",
+      "error": "CAPTCHA detected",
+      "timestamp": "2025-09-01T12:00:06.700Z",
       "success": false
     }
   ]
