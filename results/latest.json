@@ -1,6 +1,6 @@
 {
-  "timestamp": "2025-09-02T12:02:19.009Z",
-  "duration": 235582,
+  "timestamp": "2025-09-02T19:43:11.748Z",
+  "duration": 284893,
   "totalSearches": 3,
   "successfulSearches": 0,
   "results": [
@@ -11,17 +11,17 @@
       ],
       "domain": "",
       "error": "CAPTCHA detected",
-      "timestamp": "2025-09-02T11:58:24.345Z",
+      "timestamp": "2025-09-02T19:38:28.038Z",
       "success": false
     },
     {
-      "query": "機器學習",
+      "query": "網路行銷",
       "keywords": [
-        "ChatGPT"
+        "Facebook"
       ],
       "domain": "",
       "error": "CAPTCHA detected",
-      "timestamp": "2025-09-02T11:59:20.490Z",
+      "timestamp": "2025-09-02T19:39:53.479Z",
       "success": false
     },
     {
@@ -31,7 +31,7 @@
       ],
       "domain": "",
       "error": "CAPTCHA detected",
-      "timestamp": "2025-09-02T12:00:37.751Z",
+      "timestamp": "2025-09-02T19:41:40.030Z",
       "success": false
     }
   ]
