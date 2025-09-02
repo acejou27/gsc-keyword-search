@@ -1,9 +1,19 @@
 {
-  "timestamp": "2025-09-01T12:01:46.421Z",
-  "duration": 223479,
+  "timestamp": "2025-09-02T12:02:19.009Z",
+  "duration": 235582,
   "totalSearches": 3,
   "successfulSearches": 0,
   "results": [
+    {
+      "query": "Python 入門",
+      "keywords": [
+        "Django"
+      ],
+      "domain": "",
+      "error": "CAPTCHA detected",
+      "timestamp": "2025-09-02T11:58:24.345Z",
+      "success": false
+    },
     {
       "query": "機器學習",
       "keywords": [
@@ -11,7 +21,7 @@
       ],
       "domain": "",
       "error": "CAPTCHA detected",
-      "timestamp": "2025-09-01T11:58:03.831Z",
+      "timestamp": "2025-09-02T11:59:20.490Z",
       "success": false
     },
     {
@@ -21,17 +31,7 @@
       ],
       "domain": "",
       "error": "CAPTCHA detected",
-      "timestamp": "2025-09-01T11:59:35.368Z",
-      "success": false
-    },
-    {
-      "query": "網路行銷",
-      "keywords": [
-        "Facebook"
-      ],
-      "domain": "",
-      "error": "CAPTCHA detected",
-      "timestamp": "2025-09-01T12:00:06.700Z",
+      "timestamp": "2025-09-02T12:00:37.751Z",
       "success": false
     }
   ]
