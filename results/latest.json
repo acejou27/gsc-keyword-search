@@ -1,17 +1,17 @@
 {
-  "timestamp": "2025-09-04T03:50:29.305Z",
-  "duration": 110024,
+  "timestamp": "2025-09-04T11:56:17.317Z",
+  "duration": 80662,
   "totalSearches": 1,
   "successfulSearches": 0,
   "results": [
     {
-      "query": "關鍵字研究",
+      "query": "Python 教學",
       "keywords": [
-        "Google"
+        "Django"
       ],
       "domain": "",
       "error": "CAPTCHA detected",
-      "timestamp": "2025-09-04T03:48:40.582Z",
+      "timestamp": "2025-09-04T11:54:57.972Z",
       "success": false
     }
   ]
