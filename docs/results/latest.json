@@ -1,19 +1,9 @@
 {
-  "timestamp": "2025-09-03T19:44:28.238Z",
-  "duration": 271011,
-  "totalSearches": 3,
+  "timestamp": "2025-09-04T03:50:29.305Z",
+  "duration": 110024,
+  "totalSearches": 1,
   "successfulSearches": 0,
   "results": [
-    {
-      "query": "SEO 優化",
-      "keywords": [
-        "Google"
-      ],
-      "domain": "",
-      "error": "CAPTCHA detected",
-      "timestamp": "2025-09-03T19:39:58.788Z",
-      "success": false
-    },
     {
       "query": "關鍵字研究",
       "keywords": [
@@ -21,17 +11,7 @@
       ],
       "domain": "",
       "error": "CAPTCHA detected",
-      "timestamp": "2025-09-03T19:40:48.535Z",
-      "success": false
-    },
-    {
-      "query": "數位行銷",
-      "keywords": [
-        "Facebook"
-      ],
-      "domain": "",
-      "error": "CAPTCHA detected",
-      "timestamp": "2025-09-03T19:42:41.666Z",
+      "timestamp": "2025-09-04T03:48:40.582Z",
       "success": false
     }
   ]
