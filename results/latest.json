@@ -1,37 +1,37 @@
 {
-  "timestamp": "2025-09-05T12:01:16.354Z",
-  "duration": 182605,
+  "timestamp": "2025-09-05T19:38:16.843Z",
+  "duration": 171567,
   "totalSearches": 3,
   "successfulSearches": 0,
   "results": [
     {
-      "query": "網路行銷",
-      "keywords": [
-        "Facebook"
-      ],
-      "domain": "",
-      "error": "CAPTCHA detected",
-      "timestamp": "2025-09-05T11:58:14.971Z",
-      "success": false
-    },
-    {
-      "query": "AI 工具",
+      "query": "機器學習",
       "keywords": [
         "ChatGPT"
       ],
       "domain": "",
       "error": "CAPTCHA detected",
-      "timestamp": "2025-09-05T11:59:17.608Z",
+      "timestamp": "2025-09-05T19:35:26.893Z",
       "success": false
     },
     {
-      "query": "關鍵字研究",
+      "query": "SEO 優化",
       "keywords": [
         "Google"
       ],
       "domain": "",
       "error": "CAPTCHA detected",
-      "timestamp": "2025-09-05T12:00:15.247Z",
+      "timestamp": "2025-09-05T19:36:03.853Z",
+      "success": false
+    },
+    {
+      "query": "Python 入門",
+      "keywords": [
+        "Django"
+      ],
+      "domain": "",
+      "error": "CAPTCHA detected",
+      "timestamp": "2025-09-05T19:37:08.770Z",
       "success": false
     }
   ]
