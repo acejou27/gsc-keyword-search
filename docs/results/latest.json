@@ -1,19 +1,9 @@
 {
-  "timestamp": "2025-09-06T03:45:45.125Z",
-  "duration": 116627,
+  "timestamp": "2025-09-06T12:01:07.456Z",
+  "duration": 159276,
   "totalSearches": 2,
   "successfulSearches": 0,
   "results": [
-    {
-      "query": "Python 入門",
-      "keywords": [
-        "Django"
-      ],
-      "domain": "",
-      "error": "CAPTCHA detected",
-      "timestamp": "2025-09-06T03:43:49.611Z",
-      "success": false
-    },
     {
       "query": "SEO 優化",
       "keywords": [
@@ -21,7 +11,17 @@
       ],
       "domain": "",
       "error": "CAPTCHA detected",
-      "timestamp": "2025-09-06T03:44:31.691Z",
+      "timestamp": "2025-09-06T11:58:29.151Z",
+      "success": false
+    },
+    {
+      "query": "Python 入門",
+      "keywords": [
+        "Django"
+      ],
+      "domain": "",
+      "error": "CAPTCHA detected",
+      "timestamp": "2025-09-06T11:59:44.728Z",
       "success": false
     }
   ]
