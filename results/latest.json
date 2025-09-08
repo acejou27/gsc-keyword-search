@@ -1,37 +1,17 @@
 {
-  "timestamp": "2025-09-08T12:03:11.933Z",
-  "duration": 279115,
-  "totalSearches": 3,
+  "timestamp": "2025-09-08T19:45:33.006Z",
+  "duration": 78010,
+  "totalSearches": 1,
   "successfulSearches": 0,
   "results": [
     {
-      "query": "機器學習",
+      "query": "Python 教學",
       "keywords": [
-        "ChatGPT"
+        "Django"
       ],
       "domain": "",
       "error": "CAPTCHA detected",
-      "timestamp": "2025-09-08T11:58:33.736Z",
-      "success": false
-    },
-    {
-      "query": "網路行銷",
-      "keywords": [
-        "Facebook"
-      ],
-      "domain": "",
-      "error": "CAPTCHA detected",
-      "timestamp": "2025-09-08T12:00:34.102Z",
-      "success": false
-    },
-    {
-      "query": "數位行銷",
-      "keywords": [
-        "Facebook"
-      ],
-      "domain": "",
-      "error": "CAPTCHA detected",
-      "timestamp": "2025-09-08T12:01:46.580Z",
+      "timestamp": "2025-09-08T19:44:16.013Z",
       "success": false
     }
   ]
