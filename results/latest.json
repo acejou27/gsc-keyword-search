@@ -1,19 +1,9 @@
 {
-  "timestamp": "2025-09-09T12:02:26.815Z",
-  "duration": 213532,
+  "timestamp": "2025-09-09T19:37:47.355Z",
+  "duration": 117782,
   "totalSearches": 2,
   "successfulSearches": 0,
   "results": [
-    {
-      "query": "關鍵字研究",
-      "keywords": [
-        "Google"
-      ],
-      "domain": "",
-      "error": "CAPTCHA detected",
-      "timestamp": "2025-09-09T11:58:54.552Z",
-      "success": false
-    },
     {
       "query": "Python 教學",
       "keywords": [
@@ -21,7 +11,17 @@
       ],
       "domain": "",
       "error": "CAPTCHA detected",
-      "timestamp": "2025-09-09T12:00:42.180Z",
+      "timestamp": "2025-09-09T19:35:50.907Z",
+      "success": false
+    },
+    {
+      "query": "Python 入門",
+      "keywords": [
+        "Django"
+      ],
+      "domain": "",
+      "error": "CAPTCHA detected",
+      "timestamp": "2025-09-09T19:36:31.678Z",
       "success": false
     }
   ]
