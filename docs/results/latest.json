@@ -1,9 +1,19 @@
 {
-  "timestamp": "2025-09-08T19:45:33.006Z",
-  "duration": 78010,
-  "totalSearches": 1,
+  "timestamp": "2025-09-09T12:02:26.815Z",
+  "duration": 213532,
+  "totalSearches": 2,
   "successfulSearches": 0,
   "results": [
+    {
+      "query": "關鍵字研究",
+      "keywords": [
+        "Google"
+      ],
+      "domain": "",
+      "error": "CAPTCHA detected",
+      "timestamp": "2025-09-09T11:58:54.552Z",
+      "success": false
+    },
     {
       "query": "Python 教學",
       "keywords": [
@@ -11,7 +21,7 @@
       ],
       "domain": "",
       "error": "CAPTCHA detected",
-      "timestamp": "2025-09-08T19:44:16.013Z",
+      "timestamp": "2025-09-09T12:00:42.180Z",
       "success": false
     }
   ]
