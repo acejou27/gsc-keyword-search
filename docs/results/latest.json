@@ -1,7 +1,7 @@
 {
-  "timestamp": "2025-09-09T19:37:47.355Z",
-  "duration": 117782,
-  "totalSearches": 2,
+  "timestamp": "2025-09-10T03:50:31.499Z",
+  "duration": 76982,
+  "totalSearches": 1,
   "successfulSearches": 0,
   "results": [
     {
@@ -11,17 +11,7 @@
       ],
       "domain": "",
       "error": "CAPTCHA detected",
-      "timestamp": "2025-09-09T19:35:50.907Z",
-      "success": false
-    },
-    {
-      "query": "Python 入門",
-      "keywords": [
-        "Django"
-      ],
-      "domain": "",
-      "error": "CAPTCHA detected",
-      "timestamp": "2025-09-09T19:36:31.678Z",
+      "timestamp": "2025-09-10T03:49:15.797Z",
       "success": false
     }
   ]
