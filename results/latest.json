@@ -1,9 +1,19 @@
 {
-  "timestamp": "2025-09-11T11:59:03.563Z",
-  "duration": 78654,
-  "totalSearches": 1,
+  "timestamp": "2025-09-12T03:52:34.810Z",
+  "duration": 220368,
+  "totalSearches": 3,
   "successfulSearches": 0,
   "results": [
+    {
+      "query": "Python 教學",
+      "keywords": [
+        "Django"
+      ],
+      "domain": "",
+      "error": "CAPTCHA detected",
+      "timestamp": "2025-09-12T03:48:55.717Z",
+      "success": false
+    },
     {
       "query": "Python 入門",
       "keywords": [
@@ -11,7 +21,17 @@
       ],
       "domain": "",
       "error": "CAPTCHA detected",
-      "timestamp": "2025-09-11T11:57:45.783Z",
+      "timestamp": "2025-09-12T03:49:49.558Z",
+      "success": false
+    },
+    {
+      "query": "網路行銷",
+      "keywords": [
+        "Facebook"
+      ],
+      "domain": "",
+      "error": "CAPTCHA detected",
+      "timestamp": "2025-09-12T03:50:49.383Z",
       "success": false
     }
   ]
