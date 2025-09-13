@@ -1,9 +1,19 @@
 {
-  "timestamp": "2025-09-13T03:45:27.302Z",
-  "duration": 288683,
-  "totalSearches": 3,
+  "timestamp": "2025-09-13T11:58:27.152Z",
+  "duration": 186355,
+  "totalSearches": 2,
   "successfulSearches": 0,
   "results": [
+    {
+      "query": "網路行銷",
+      "keywords": [
+        "Facebook"
+      ],
+      "domain": "",
+      "error": "CAPTCHA detected",
+      "timestamp": "2025-09-13T11:55:22.109Z",
+      "success": false
+    },
     {
       "query": "Python 教學",
       "keywords": [
@@ -11,27 +21,7 @@
       ],
       "domain": "",
       "error": "CAPTCHA detected",
-      "timestamp": "2025-09-13T03:40:39.584Z",
-      "success": false
-    },
-    {
-      "query": "Python 入門",
-      "keywords": [
-        "Django"
-      ],
-      "domain": "",
-      "error": "CAPTCHA detected",
-      "timestamp": "2025-09-13T03:42:23.603Z",
-      "success": false
-    },
-    {
-      "query": "機器學習",
-      "keywords": [
-        "ChatGPT"
-      ],
-      "domain": "",
-      "error": "CAPTCHA detected",
-      "timestamp": "2025-09-13T03:44:03.807Z",
+      "timestamp": "2025-09-13T11:56:53.565Z",
       "success": false
     }
   ]
